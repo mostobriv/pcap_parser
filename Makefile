@@ -12,16 +12,16 @@ DEBUG =
 
 %.o: %.cpp
 	@echo 'Building file: $<'
-	@$(CXX) $(PCAPPP_BUILD_FLAGS) $(PCAPPP_INCLUDES) $(FLAGS) $(INCLUDES) $(DEBUG) -Wall -std=c++2a -c -o $@ $<
+	@$(CXX) $(PCAPPP_BUILD_FLAGS) $(PCAPPP_INCLUDES) $(FLAGS) $(INCLUDES) $(DEBUG) -Wall -std=c++17 -c -o $@ $<
 
 
 all: $(BINARY)
 
 
-debug: set_debug $(BINARY)
+debug: set-debug $(BINARY)
 
 
-set_debug:
+set-debug:
 	$(eval DEBUG := -DDEBUG)
 
 
@@ -31,4 +31,5 @@ $(BINARY): $(OBJECTS)
 
 
 clean:
-	rm $(OBJECTS) $(BINARY)
+	@rm -f $(OBJECTS)
+	@rm -f $(BINARY)
