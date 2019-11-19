@@ -57,8 +57,9 @@ void PcapLoader::on_message_ready_callback(int side, TcpStreamData tcp_data, voi
     auto manager_iter = manager->table.find(tcp_data.getConnectionDataRef().flowKey);
 
     // if connection not in the map yet (idk how it's even possible but who the fuck cares about)
+    auto& conn_data = tcp_data.getConnectionDataRef();
     if (manager_iter == manager->table.end()) {
-		manager->table.insert({tcp_data.getConnectionDataRef().flowKey, reassembly_state_t()});
+		manager->table.insert({tcp_data.getConnectionDataRef().flowKey, reassembly_state_t(conn_data.srcPort, conn_data.dstPort)});
 		manager_iter = manager->table.find(tcp_data.getConnectionDataRef().flowKey);
 	}
 
@@ -87,7 +88,7 @@ void PcapLoader::on_connection_start_callback(ConnectionData connection_data, vo
 
     // new connection
     if (manager_iter == manager->table.end()) {
-        manager->table.insert({connection_data.flowKey, reassembly_state_t()});
+        manager->table.insert({connection_data.flowKey, reassembly_state_t(connection_data.srcPort, connection_data.dstPort)});
     }
 }
 

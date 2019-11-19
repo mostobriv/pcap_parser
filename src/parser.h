@@ -22,9 +22,20 @@ enum Side {client = 0, server, unknown};
 struct reassembly_state_t {
     Side current_side;
     uint32_t msg_count;
+    uint16_t src_port;
+    uint16_t dest_port;
 
 
-    reassembly_state_t() : current_side(unknown), msg_count(0) {}
+    reassembly_state_t() : reassembly_state_t(unknown, 0, 0, 0) {};
+    reassembly_state_t(uint16_t s, uint16_t d) : reassembly_state_t(unknown, 0, s, d) {};
+    reassembly_state_t(Side start_side, uint32_t msg_count, uint16_t _src_port, uint16_t _dest_port) {
+        current_side    = start_side;
+        msg_count       = msg_count;
+        src_port        = _src_port;
+        dest_port       = _dest_port;
+
+    }
+    
     ~reassembly_state_t() {}
 };
 
@@ -58,7 +69,7 @@ class PcapLoader {
 
 
     public:
-    
+
         Logger _logger;
 
         PcapLoader(size_t cache_size=64);
