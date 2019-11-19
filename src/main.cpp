@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "logger.h"
 
 #include <iostream>
 
@@ -11,10 +12,7 @@ int main(int argc, char** argv) {
         foo.parse(argv[1]);
 
     } catch (const std::exception& e) {
-        const boost::stacktrace::stacktrace* st = boost::get_error_info<traced>(e);
-        if (st) {
-            std::cerr << *st << '\n';
-        }
+        std::cout << e.what() << std::endl;
     }
 
     return 0;

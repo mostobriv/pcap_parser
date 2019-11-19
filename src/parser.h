@@ -1,5 +1,8 @@
 #pragma once
 
+
+#include "logger.h"
+
 #include <map>
 
 #include <TcpReassembly.h>
@@ -10,61 +13,60 @@
 #include <PcapPlusPlusVersion.h>
 #include <LRUList.h>
 
-#include <boost/stacktrace.hpp>
-#include <boost/exception/all.hpp>
-
 using namespace pcpp;
 
 
-#include <iostream>
-
-enum Side {client = 0, server};
+enum Side {client = 0, server, unknown};
 
 
-typedef boost::error_info<struct tag_stacktrace, boost::stacktrace::stacktrace> traced;
-
-
-typedef struct reassembly_state {
+struct reassembly_state_t {
     Side current_side;
+    uint32_t msg_count;
 
 
-    reassembly_state() : current_side(client) {}
-    ~reassembly_state() {}
-} reassembly_state_t;
+    reassembly_state_t() : current_side(unknown), msg_count(0) {}
+    ~reassembly_state_t() {}
+};
 
 
-typedef std::map<uint32_t, reassembly_state_t> conn_table;
-typedef std::map<uint32_t, reassembly_state_t>::iterator conn_table_iter;
+using conn_table = std::map<uint32_t, reassembly_state_t>;
+using conn_table_iter = std::map<uint32_t, reassembly_state_t>::iterator;
 
 
-typedef struct conn_mgr {
+struct conn_mgr_t {
     conn_table table;
     LRUList<uint32_t> cache;
 
 
-    conn_mgr(size_t cache_size) : table(), cache(cache_size) {}
-    ~conn_mgr() {}
-} conn_mgr_t;
+    conn_mgr_t(size_t cache_size) : table(), cache(cache_size) {}
+    ~conn_mgr_t() {}
+};
 
 
 class PcapLoader {
     private:
 
+        bool autoremove;
+
         conn_mgr_t connection_manager;
         TcpReassemblyConfiguration cleanup_configuration;
         TcpReassembly reassembler;
-
+        
         static void on_message_ready_callback(int side, TcpStreamData tcp_data, void* user_cookie);
         static void on_connection_start_callback(ConnectionData connection_data, void* user_cookie);
         static void on_connection_end_callback(ConnectionData connection_data, TcpReassembly::ConnectionEndReason reason, void* user_cookie);
 
 
     public:
+    
+        Logger _logger;
 
-        // PcapLoader();
         PcapLoader(size_t cache_size=64);
         // Watch();
         bool parse(std::string filename);
         ~PcapLoader();
+
+        bool get_autoremove() { return autoremove; };
+        void set_autoremove(bool state) { autoremove = state; };
 
 };

@@ -6,52 +6,37 @@
 #include <fmt/format.h>
 
 
-// PcapLoader::PcapLoader() : PcapLoader::PcapLoader(64) {};
-
 PcapLoader::PcapLoader(size_t cache_size) :
+            autoremove(false),
             connection_manager(cache_size),
             cleanup_configuration(true, 1, 50),
             reassembler(on_message_ready_callback, 
                         &connection_manager,
                         on_connection_start_callback, 
                         on_connection_end_callback,
-                        cleanup_configuration)
+                        cleanup_configuration),
+            _logger("PcapLoader")
 {
-#ifdef DEBUG
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-#endif
-
-}
-
-template <class E>
-void throw_with_trace(const E& e) {
-    throw boost::enable_error_info(e)
-        << traced(boost::stacktrace::stacktrace());
+    _logger.debug(__PRETTY_FUNCTION__);
 }
 
 
 bool PcapLoader::parse(std::string filename) {
-#ifdef DEBUG
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-#endif
+    _logger.debug(__PRETTY_FUNCTION__);
 
     RawPacket rawPacket;
     auto reader = std::unique_ptr<IFileReaderDevice>(IFileReaderDevice::getReader(filename.c_str()));
 
     if (!reader->open()) {
-        throw_with_trace(
-            std::invalid_argument(fmt::format("Can't open file in reassembler: {}", filename))
-        );
+        throw std::invalid_argument(fmt::format("Can't open file: {}", filename));
     }
 
     while (reader->getNextPacket(rawPacket)) {
 		reassembler.reassemblePacket(&rawPacket);
 	}
 
-#ifdef DEBUG
 	auto processed_connections = reassembler.getConnectionInformation().size();
-    std::cout << "[*] Processed " << processed_connections << " connections" << std::endl;
-#endif
+    _logger.info(fmt::format("Processed {} connections", processed_connections));
 
     reassembler.closeAllConnections();
     reader->close();
@@ -61,21 +46,37 @@ bool PcapLoader::parse(std::string filename) {
 
 
 PcapLoader::~PcapLoader() {
-#ifdef DEBUG
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-#endif
+    _logger.debug(__PRETTY_FUNCTION__);
 }
 
 
+std::string buf;
 void PcapLoader::on_message_ready_callback(int side, TcpStreamData tcp_data, void* user_cookie) {
 
     auto manager = reinterpret_cast<conn_mgr_t*>(user_cookie);
     auto manager_iter = manager->table.find(tcp_data.getConnectionDataRef().flowKey);
 
+    // if connection not in the map yet (idk how it's even possible but who the fuck cares about)
     if (manager_iter == manager->table.end()) {
-		manager->table.insert({tcp_data.getConnectionDataRef().flowKey, std::move(reassembly_state_t())});
+		manager->table.insert({tcp_data.getConnectionDataRef().flowKey, reassembly_state_t()});
 		manager_iter = manager->table.find(tcp_data.getConnectionDataRef().flowKey);
 	}
+
+    auto& conn_state = manager_iter->second;
+
+    if (conn_state.msg_count == 0 || conn_state.current_side != side) {
+        conn_state.current_side = static_cast<Side>(side);
+        if (conn_state.msg_count != 0) {
+            std::cout << "=============================== ! side ! ===============================" << std::endl << buf;
+        }
+        if (buf.back() != '\n') {
+            std::cout << std::endl;
+        }
+        buf.clear();
+    }
+    conn_state.msg_count++;
+    
+    buf+= reinterpret_cast<char*>(tcp_data.getData());
 }
 
 
@@ -86,7 +87,7 @@ void PcapLoader::on_connection_start_callback(ConnectionData connection_data, vo
 
     // new connection
     if (manager_iter == manager->table.end()) {
-        manager->table.insert({connection_data.flowKey, std::move(reassembly_state_t())});
+        manager->table.insert({connection_data.flowKey, reassembly_state_t()});
     }
 }
 
@@ -100,7 +101,6 @@ void PcapLoader::on_connection_end_callback(ConnectionData connection_data, TcpR
     if (manager_iter == manager->table.end()) {
         return;
     }
-
 
     manager->table.erase(manager_iter);
 }
