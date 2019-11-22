@@ -8,7 +8,7 @@ RUN apt-get update && \
     cmake \
     g++ \
     gcc \
-    libboost-all-dev \
+    libboost-stacktrace-dev \
     libpq-dev
 
 RUN git clone https://github.com/seladb/PcapPlusPlus.git

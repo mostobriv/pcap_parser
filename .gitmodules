@@ -1,0 +1,6 @@
+[submodule "lib/PcapPlusPlus"]
+	path = lib/PcapPlusPlus
+	url = https://github.com/seladb/PcapPlusPlus.git
+[submodule "lib/fmt"]
+	path = lib/fmt
+	url = https://github.com/fmtlib/fmt

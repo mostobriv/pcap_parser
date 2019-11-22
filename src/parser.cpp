@@ -32,10 +32,10 @@ bool PcapLoader::parse(std::string filename) {
     }
 
     while (reader->getNextPacket(rawPacket)) {
-		reassembler.reassemblePacket(&rawPacket);
-	}
+        reassembler.reassemblePacket(&rawPacket);
+    }
 
-	auto processed_connections = reassembler.getConnectionInformation().size();
+    auto processed_connections = reassembler.getConnectionInformation().size();
     _logger.info(fmt::format("Processed {} connections", processed_connections));
 
     reassembler.closeAllConnections();
@@ -59,9 +59,9 @@ void PcapLoader::on_message_ready_callback(int side, TcpStreamData tcp_data, voi
     // if connection not in the map yet (idk how it's even possible but who the fuck cares about)
     auto& conn_data = tcp_data.getConnectionDataRef();
     if (manager_iter == manager->table.end()) {
-		manager->table.insert({tcp_data.getConnectionDataRef().flowKey, reassembly_state_t(conn_data.srcPort, conn_data.dstPort)});
-		manager_iter = manager->table.find(tcp_data.getConnectionDataRef().flowKey);
-	}
+        manager->table.insert({tcp_data.getConnectionDataRef().flowKey, reassembly_state_t(conn_data.srcPort, conn_data.dstPort)});
+        manager_iter = manager->table.find(tcp_data.getConnectionDataRef().flowKey);
+    }
 
     auto& conn_state = manager_iter->second;
 
