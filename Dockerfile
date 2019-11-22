@@ -9,7 +9,8 @@ RUN apt-get update && \
     g++ \
     gcc \
     libboost-stacktrace-dev \
-    libpq-dev
+    libpq-dev \
+    libpqxx-dev
 
 RUN git clone https://github.com/seladb/PcapPlusPlus.git
 
