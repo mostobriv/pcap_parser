@@ -1,31 +1,68 @@
-# include /usr/local/etc/PcapPlusPlus.mk
+## Parameteres ##
 
-# this is used only for the libraries to be built before the project itself is built
+
+# What boost::stacktrace should use
+# Allowed values: BACKTRACE_SYSTEM, BACKTRACE_LIB, NONE
+STACKTRACE_BACKEND = BACKTRACE_SYSTEM
+
+
+## Submodules and system dependecies ##
+
+
+# this is used only so the libraries are built before the project itself is built
 LIB_INCLUDES = lib/fmt/include/ \
-               lib/libbacktrace/libbacktrace/ \
                lib/PcapPlusPlus/Common++/
+ifeq ($(STACKTRACE_BACKEND),BACKTRACE_LIB)
+LIB_INCLUDES := $(LIB_INCLUDES) lib/libbacktrace/libbacktrace/
+endif
+
 #submodule libraries
 STATIC_LIBRARIES = lib/fmt/build/libfmt.a \
-                   lib/libbacktrace/libbacktrace/libbacktrace.la \
                    lib/PcapPlusPlus/Common++/Lib/Release/libCommon++.a \
                    lib/PcapPlusPlus/Packet++/Lib/libPacket++.a \
                    lib/PcapPlusPlus/Pcap++/Lib/libPcap++.a
+ifeq ($(STACKTRACE_BACKEND),BACKTRACE_LIB)
+STATIC_LIBRARIES := $(STATIC_LIBRARIES) lib/libbacktrace/libbacktrace/libbacktrace.la
+endif
+
 #submodule include dirs, also libpq
 INCLUDES = -I /usr/include/postgresql \
            -I ./lib/fmt/include \
-           -I ./lib/libbacktrace/libbacktrace \
            -I ./lib/PcapPlusPlus/Common++/header \
            -I ./lib/PcapPlusPlus/Packet++/header \
            -I ./lib/PcapPlusPlus/Pcap++/header
+ifeq ($(STACKTRACE_BACKEND),BACKTRACE_LIB)
+INCLUDES := $(INCLUDES) -I ./lib/libbacktrace/libbacktrace
+endif
+
+LIBRARIES = -lpq
+ifeq ($(STACKTRACE_BACKEND),BACKTRACE_SYSTEM)
+LIBRARIES := $(LIBRARIES) -ldl -lboost_stacktrace_backtrace
+endif
+
+
+## General build variables ##
+
 
 SOURCES = $(wildcard src/*.cpp)
 OBJECTS = $(patsubst %.cpp,%.o,$(SOURCES))
 BINARY  = parser
-LIBRARIES = -ldl -lboost_stacktrace_backtrace -lpq
-FLAGS = -DBOOST_STACKTRACE_USE_BACKTRACE -g
+
+FLAGS = -g
+ifeq ($(STACKTRACE_BACKEND),NONE)
+FLAGS := $(FLAGS) -DBOOST_STACKTRACE_USE_NOOP
+else
+FLAGS := $(FLAGS) -DBOOST_STACKTRACE_USE_BACKTRACE
+endif
+
+
 DEBUG = 
 
 .SILENT:
+
+
+## General project files ##
+
 
 %.o: %.cpp | $(LIB_INCLUDES)
 	@echo 'Building file: $<'
@@ -48,6 +85,9 @@ $(BINARY): $(OBJECTS) $(STATIC_LIBRARIES)
 	@$(PCAPPP_POST_BUILD)
 
 
+## Submodules ##
+
+
 lib/fmt/build/libfmt.a: | lib/fmt/build/
 	@cd lib/fmt/build/ && cmake ..
 	@$(MAKE) -C lib/fmt/build fmt
@@ -56,6 +96,7 @@ lib/fmt/build:
 	@cd lib/fmt && git submodule update --init
 	@mkdir lib/fmt/build
 
+ifeq ($(STACKTRACE_BACKEND),BACKTRACE_LIB)
 lib/libbacktrace/libbacktrace/libbacktrace.la:
 	@echo 'building libbacktrace'
 	@cd lib/libbacktrace/libbacktrace/ && ./configure
@@ -63,14 +104,18 @@ lib/libbacktrace/libbacktrace/libbacktrace.la:
 	#
 	@echo 'Testing libbacktrace features'
 	@cd lib/libbacktrace/ && $(CXX) supported.cpp && ./a.out
+endif
 
 # as far as i know, there is no wasy to say that this recipie provides all three libs.
 lib/PcapPlusPlus/Common++/Lib/Release/libCommon++.a: | lib/PcapPlusPlus/mk/
-	@$(MAKE) -C lib/PcapPlusPlus/
+	@$(MAKE) -C lib/PcapPlusPlus/ libs
 
 lib/PcapPlusPlus/mk/:
 	@echo 'Initializing submodule $@'
 	@cd lib/PcapPlusPlus/ && git submodule update --init && ./configure-linux.sh --default
+
+
+## Clean ##
 
 
 clean:
