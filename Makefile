@@ -9,11 +9,12 @@ STACKTRACE_BACKEND = BACKTRACE_SYSTEM
 ## Submodules and system dependecies ##
 
 
-# this is used only so the libraries are built before the project itself is built
-LIB_INCLUDES = lib/fmt/include/ \
-               lib/PcapPlusPlus/Common++/
+# This is used only so the libraries are built before the project itself is built,
+# Remember to also add recipies for those
+LIB_PREBUILT = lib/fmt/build/ \
+               lib/PcapPlusPlus/mk/
 ifeq ($(STACKTRACE_BACKEND),BACKTRACE_LIB)
-LIB_INCLUDES := $(LIB_INCLUDES) lib/libbacktrace/libbacktrace/
+LIB_PREBUILT := $(LIB_PREBUILT) lib/libbacktrace/libbacktrace/libbacktrace.la
 endif
 
 #submodule libraries
@@ -64,7 +65,7 @@ DEBUG =
 ## General project files ##
 
 
-%.o: %.cpp | $(LIB_INCLUDES)
+%.o: %.cpp | $(LIB_PREBUILT)
 	@echo 'Building file: $<'
 	@$(CXX) $(PCAPPP_BUILD_FLAGS) $(PCAPPP_INCLUDES) $(FLAGS) $(INCLUDES) $(DEBUG) -Wall -Wextra -std=c++17 -c -o $@ $<
 
@@ -91,7 +92,7 @@ $(BINARY): $(OBJECTS) $(STATIC_LIBRARIES)
 lib/fmt/build/libfmt.a: | lib/fmt/build/
 	@cd lib/fmt/build/ && cmake ..
 	@$(MAKE) -C lib/fmt/build fmt
-lib/fmt/build:
+lib/fmt/build/:
 	@echo 'Initializing submodule $@'
 	@cd lib/fmt && git submodule update --init
 	@mkdir lib/fmt/build
