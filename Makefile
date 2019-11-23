@@ -3,7 +3,7 @@
 
 # What boost::stacktrace should use
 # Allowed values: BACKTRACE_SYSTEM, BACKTRACE_LIB, NONE
-STACKTRACE_BACKEND = BACKTRACE_LIB
+STACKTRACE_BACKEND = NONE
 
 
 ## Submodules and system dependecies ##
@@ -18,25 +18,28 @@ LIB_PREBUILT := $(LIB_PREBUILT) lib/libbacktrace/libbacktrace/libbacktrace.la
 endif
 
 #submodule libraries
-STATIC_LIBRARIES = lib/fmt/build/libfmt.a \
-                   lib/PcapPlusPlus/Common++/Lib/Release/libCommon++.a \
-                   lib/PcapPlusPlus/Packet++/Lib/libPacket++.a \
-                   lib/PcapPlusPlus/Pcap++/Lib/libPcap++.a
+SUBMODULE_LIBS_DIR = -L ./lib/fmt/build \
+		     -L ./lib/PcapPlusPlus/Dist
 ifeq ($(STACKTRACE_BACKEND),BACKTRACE_LIB)
-STATIC_LIBRARIES := $(STATIC_LIBRARIES) lib/libbacktrace/libbacktrace/.libs/libbacktrace.a
+SUBMODULE_LIBS_DIR := $(SUBMODULE_LIBS_DIR) \
+	-L ./lib/libbacktrace/libbacktrace/.libs
+endif
+SUBMODULE_LIBS = -lfmt \
+                 -lPcap++ \
+                 -lPacket++ \
+                 -lCommon++
+ifeq ($(STACKTRACE_BACKEND),BACKTRACE_LIB)
+SUBMODULE_LIBS := $(SUBMODULE_LIBS) -lbacktrace
 endif
 
-#submodule include dirs, also libpq
-INCLUDES = -I /usr/include/postgresql \
-           -I ./lib/fmt/include \
-           -I ./lib/PcapPlusPlus/Common++/header \
-           -I ./lib/PcapPlusPlus/Packet++/header \
-           -I ./lib/PcapPlusPlus/Pcap++/header
+#submodule include dirs
+INCLUDES = -I ./lib/fmt/include \
+	   -I lib/PcapPlusPlus/Dist/header
 ifeq ($(STACKTRACE_BACKEND),BACKTRACE_LIB)
 INCLUDES := $(INCLUDES) -I ./lib/libbacktrace/libbacktrace
 endif
 
-LIBRARIES = -lpq
+LIBRARIES = -lpcap -lpthread
 ifeq ($(STACKTRACE_BACKEND),BACKTRACE_SYSTEM)
 LIBRARIES := $(LIBRARIES) -ldl -lboost_stacktrace_backtrace
 endif
@@ -61,8 +64,6 @@ WARNINGS = -Wall -Wextra -Werror -Wno-unused-parameter
 
 DEBUG = 
 
-.SILENT:
-
 
 ## General project files ##
 
@@ -82,23 +83,22 @@ set-debug:
 	$(eval DEBUG := -DDEBUG)
 
 
-$(BINARY): $(OBJECTS) $(STATIC_LIBRARIES)
+$(BINARY): $(OBJECTS)
 	@echo 'Building binary $@'
-	@$(CXX) $(PCAPPP_LIBS_DIR) $(FLAGS) $(DEBUG) -o $@ $^ $(PCAPPP_LIBS) $(LIBRARIES)
-	@$(PCAPPP_POST_BUILD)
+	$(CXX) $(FLAGS) $(DEBUG) -o $@ $^ $(SUBMODULE_LIBS_DIR) $(LIBRARIES) $(SUBMODULE_LIBS)
 
 
 ## Submodules ##
 
 
-lib/fmt/build/libfmt.a: | lib/fmt/build/
-	@echo 'Building submodule fmt'
-	@cd lib/fmt/build/ && cmake ..
-	@$(MAKE) -C lib/fmt/build fmt
 lib/fmt/build/:
 	@echo 'Initializing submodule $@'
 	@cd lib/fmt && git submodule update --init
 	@mkdir lib/fmt/build
+	#
+	@echo 'Building submodule fmt'
+	@cd lib/fmt/build/ && cmake ..
+	@$(MAKE) -C lib/fmt/build fmt
 
 ifeq ($(STACKTRACE_BACKEND),BACKTRACE_LIB)
 lib/libbacktrace/libbacktrace/libbacktrace.la:
@@ -110,13 +110,12 @@ lib/libbacktrace/libbacktrace/libbacktrace.la:
 	@cd lib/libbacktrace/ && $(CXX) supported.cpp && ./a.out
 endif
 
-# as far as i know, there is no wasy to say that this recipie provides all three libs.
-lib/PcapPlusPlus/Common++/Lib/Release/libCommon++.a: | lib/PcapPlusPlus/mk/
-	@echo 'Building submodule PcapPlusPlus'
-	@$(MAKE) -C lib/PcapPlusPlus/ libs
 lib/PcapPlusPlus/mk/platform.mk:
 	@echo 'Initializing submodule $@'
 	@cd lib/PcapPlusPlus/ && git submodule update --init && ./configure-linux.sh --default
+	#
+	@echo 'Building submodule PcapPlusPlus'
+	@$(MAKE) -C lib/PcapPlusPlus/ libs
 
 
 ## Clean ##
