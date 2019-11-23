@@ -1,8 +1,25 @@
+## Help ##
+
+
+.PHONY: help
+help:
+	@echo '$(MAKE) [STACKTRACE_BACKEND=BACKEND] [TARGET]'
+	@echo '    STACKTRACE_BACKEND - what to use for boost::stacktrace'
+	@echo "        NONE (default) - don't use anything"
+	@echo "        BACKTRACE_SYSTEM - use system gcc's backtrace.h"
+	@echo
+	@echo '    TARGET:'
+	@echo '        clean'
+	@echo '        all'
+	@echo '        debug - all but with debug info'
+	@echo '        $(BINARY) - main binary'
+
+
 ## Parameteres ##
 
 
 # What boost::stacktrace should use
-# Allowed values: BACKTRACE_SYSTEM, BACKTRACE_LIB, NONE
+# Allowed values: BACKTRACE_SYSTEM, NONE
 STACKTRACE_BACKEND = NONE
 
 
@@ -13,31 +30,18 @@ STACKTRACE_BACKEND = NONE
 # Remember to also add recipies for those
 LIB_PREBUILT = lib/fmt/build/ \
                lib/PcapPlusPlus/mk/platform.mk
-ifeq ($(STACKTRACE_BACKEND),BACKTRACE_LIB)
-LIB_PREBUILT := $(LIB_PREBUILT) lib/libbacktrace/libbacktrace/libbacktrace.la
-endif
 
 #submodule libraries
 SUBMODULE_LIBS_DIR = -L ./lib/fmt/build \
 		     -L ./lib/PcapPlusPlus/Dist
-ifeq ($(STACKTRACE_BACKEND),BACKTRACE_LIB)
-SUBMODULE_LIBS_DIR := $(SUBMODULE_LIBS_DIR) \
-	-L ./lib/libbacktrace/libbacktrace/.libs
-endif
 SUBMODULE_LIBS = -lfmt \
                  -lPcap++ \
                  -lPacket++ \
                  -lCommon++
-ifeq ($(STACKTRACE_BACKEND),BACKTRACE_LIB)
-SUBMODULE_LIBS := $(SUBMODULE_LIBS) -lbacktrace
-endif
 
 #submodule include dirs
 INCLUDES = -I ./lib/fmt/include \
 	   -I lib/PcapPlusPlus/Dist/header
-ifeq ($(STACKTRACE_BACKEND),BACKTRACE_LIB)
-INCLUDES := $(INCLUDES) -I ./lib/libbacktrace/libbacktrace
-endif
 
 LIBRARIES = -lpcap -lpthread
 ifeq ($(STACKTRACE_BACKEND),BACKTRACE_SYSTEM)
@@ -53,10 +57,10 @@ OBJECTS = $(patsubst %.cpp,%.o,$(SOURCES))
 BINARY  = parser
 
 FLAGS = -g
-ifeq ($(STACKTRACE_BACKEND),NONE)
-FLAGS := $(FLAGS) -DBOOST_STACKTRACE_USE_NOOP
-else
+ifeq ($(STACKTRACE_BACKEND),BACKTRACE_SYSTEM)
 FLAGS := $(FLAGS) -DBOOST_STACKTRACE_USE_BACKTRACE
+else
+FLAGS := $(FLAGS) -DBOOST_STACKTRACE_USE_NOOP
 endif
 
 WARNINGS = -Wall -Wextra -Werror -Wno-unused-parameter
@@ -99,16 +103,6 @@ lib/fmt/build/:
 	@echo 'Building submodule fmt'
 	@cd lib/fmt/build/ && cmake ..
 	@$(MAKE) -C lib/fmt/build fmt
-
-ifeq ($(STACKTRACE_BACKEND),BACKTRACE_LIB)
-lib/libbacktrace/libbacktrace/libbacktrace.la:
-	@echo 'building libbacktrace'
-	@cd lib/libbacktrace/libbacktrace/ && ./configure
-	@$(MAKE) -C lib/libbacktrace/libbacktrace/
-	#
-	@echo 'Testing libbacktrace features'
-	@cd lib/libbacktrace/ && $(CXX) supported.cpp && ./a.out
-endif
 
 lib/PcapPlusPlus/mk/platform.mk:
 	@echo 'Initializing submodule $@'
