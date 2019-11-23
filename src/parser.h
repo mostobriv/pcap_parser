@@ -60,7 +60,7 @@ class PcapLoader {
 
     public:
 
-        Logger _logger;
+        logger::Logger _logger;
 
         PcapLoader(size_t cache_size=64);
         // Watch();
