@@ -36,6 +36,7 @@ endif
 
 
 SOURCES = $(wildcard src/*.cpp)
+HEADERS = $(wildcard src/*.h)
 OBJECTS = $(patsubst %.cpp,%.o,$(SOURCES))
 BINARY  = parser
 
@@ -55,7 +56,7 @@ DEBUG =
 ## General project files ##
 
 
-objs/%.o: src/%.cpp | $(LIB_PREBUILT) objs
+objs/%.o: src/%.cpp $(HEADERS) | $(LIB_PREBUILT) objs
 	@echo 'Building file: $<'
 	@$(CXX) $(PCAPPP_BUILD_FLAGS) $(PCAPPP_INCLUDES) $(FLAGS) $(INCLUDES) $(DEBUG) $(WARNINGS) -std=c++17 -c -o $@ $<
 
