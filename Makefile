@@ -1,20 +1,3 @@
-## Help ##
-
-
-.PHONY: help
-help:
-	@echo '$(MAKE) [STACKTRACE_BACKEND=BACKEND] [TARGET]'
-	@echo '    STACKTRACE_BACKEND - what to use for boost::stacktrace'
-	@echo "        NONE (default) - don't use anything"
-	@echo "        BACKTRACE_SYSTEM - use system gcc's backtrace.h"
-	@echo
-	@echo '    TARGET:'
-	@echo '        clean'
-	@echo '        all'
-	@echo '        debug - all but with debug info'
-	@echo '        $(BINARY) - main binary'
-
-
 ## Parameteres ##
 
 
@@ -72,7 +55,7 @@ DEBUG =
 ## General project files ##
 
 
-%.o: %.cpp | $(LIB_PREBUILT)
+objs/%.o: src/%.cpp | $(LIB_PREBUILT) objs
 	@echo 'Building file: $<'
 	@$(CXX) $(PCAPPP_BUILD_FLAGS) $(PCAPPP_INCLUDES) $(FLAGS) $(INCLUDES) $(DEBUG) $(WARNINGS) -std=c++17 -c -o $@ $<
 
@@ -87,9 +70,16 @@ set-debug:
 	$(eval DEBUG := -DDEBUG)
 
 
-$(BINARY): $(OBJECTS)
+$(BINARY): $(patsubst src/%.o,objs/%.o,$(OBJECTS))
 	@echo 'Building binary $@'
 	$(CXX) $(FLAGS) $(DEBUG) -o $@ $^ $(SUBMODULE_LIBS_DIR) $(LIBRARIES) $(SUBMODULE_LIBS)
+
+
+## Directories ##
+
+
+objs:
+	mkdir objs
 
 
 ## Submodules ##
@@ -118,3 +108,22 @@ lib/PcapPlusPlus/mk/platform.mk:
 clean:
 	@rm -f $(OBJECTS)
 	@rm -f $(BINARY)
+
+
+## Help ##
+
+
+.PHONY: help
+help:
+	@echo '$(MAKE) [STACKTRACE_BACKEND=BACKEND] [TARGET]'
+	@echo '    STACKTRACE_BACKEND - what to use for boost::stacktrace'
+	@echo "        NONE (default) - don't use anything"
+	@echo "        BACKTRACE_SYSTEM - use system gcc's backtrace.h"
+	@echo
+	@echo '    TARGET:'
+	@echo '        clean'
+	@echo '        all'
+	@echo '        debug - all but with debug info'
+	@echo '        $(BINARY) - main binary'
+
+
