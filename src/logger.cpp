@@ -14,15 +14,8 @@
 namespace logger
 {
 
-using traced = boost::error_info<struct tag_stacktrace, boost::stacktrace::stacktrace>;
 
-
-template <class E>
-void throw_with_trace(const E& e) 
-{
-    throw boost::enable_error_info(e)
-        << traced(boost::stacktrace::stacktrace());
-}
+Logger logger ("global", LVL_DEBUG);
 
 
 Logger::Logger(const std::string& name, Level level) :
@@ -68,16 +61,18 @@ void Logger::header(Level lvl)
     append("] [");
 
     append(m_name);
-    append("] ");
+    append("]");
 }
 
+
+using traced = boost::error_info<struct tag_stacktrace, boost::stacktrace::stacktrace>;
 
 void Logger::exception(const std::exception& e)
 {
     const boost::stacktrace::stacktrace* st = boost::get_error_info<traced>(e);
-    if (st) {
-        std::cout << termcolor::red << *st << termcolor::reset << std::endl;
-    }
+    (st ? error() << *st
+        : error() << "Exception:"
+        ) << e.what();
 }
 
 } // namespace logger
