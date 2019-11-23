@@ -106,7 +106,7 @@ lib/PcapPlusPlus/mk/platform.mk:
 
 
 clean:
-	@rm -f $(OBJECTS)
+	@rm -f objs/*
 	@rm -f $(BINARY)
 
 
