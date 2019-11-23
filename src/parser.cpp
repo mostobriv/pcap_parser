@@ -5,14 +5,16 @@
 #include <utility>
 #include <fmt/format.h>
 
+using Side = PcapLoader::Side;
+
 
 PcapLoader::PcapLoader(size_t cache_size) :
             autoremove(false),
             connection_manager(cache_size),
             cleanup_configuration(true, 1, 50),
-            reassembler(on_message_ready_callback, 
+            reassembler(on_message_ready_callback,
                         &connection_manager,
-                        on_connection_start_callback, 
+                        on_connection_start_callback,
                         on_connection_end_callback,
                         cleanup_configuration),
             _logger("PcapLoader")
@@ -24,8 +26,8 @@ PcapLoader::PcapLoader(size_t cache_size) :
 bool PcapLoader::parse(std::string filename) {
     _logger.debug(__PRETTY_FUNCTION__);
 
-    RawPacket rawPacket;
-    auto reader = std::unique_ptr<IFileReaderDevice>(IFileReaderDevice::getReader(filename.c_str()));
+    pcpp::RawPacket rawPacket;
+    auto reader = std::unique_ptr<pcpp::IFileReaderDevice>(pcpp::IFileReaderDevice::getReader(filename.c_str()));
 
     if (!reader->open()) {
         throw std::invalid_argument(fmt::format("Can't open file: {}", filename));
@@ -51,16 +53,16 @@ PcapLoader::~PcapLoader() {
 
 
 std::string buf;
-void PcapLoader::on_message_ready_callback(int side, TcpStreamData tcp_data, void* user_cookie) {
+void PcapLoader::on_message_ready_callback(int side, pcpp::TcpStreamData tcp_data, void* user_cookie) {
 
     auto manager = reinterpret_cast<conn_mgr_t*>(user_cookie);
-    auto manager_iter = manager->table.find(tcp_data.getConnectionDataRef().flowKey);
+    auto manager_iter = manager->table.find(tcp_data.getConnectionData().flowKey);
 
     // if connection not in the map yet (idk how it's even possible but who the fuck cares about)
-    auto& conn_data = tcp_data.getConnectionDataRef();
+    auto& conn_data = tcp_data.getConnectionData();
     if (manager_iter == manager->table.end()) {
-        manager->table.insert({tcp_data.getConnectionDataRef().flowKey, reassembly_state_t(conn_data.srcPort, conn_data.dstPort)});
-        manager_iter = manager->table.find(tcp_data.getConnectionDataRef().flowKey);
+        manager->table.insert({tcp_data.getConnectionData().flowKey, reassembly_state_t(conn_data.srcPort, conn_data.dstPort)});
+        manager_iter = manager->table.find(tcp_data.getConnectionData().flowKey);
     }
 
     auto& conn_state = manager_iter->second;
@@ -81,7 +83,7 @@ void PcapLoader::on_message_ready_callback(int side, TcpStreamData tcp_data, voi
 }
 
 
-void PcapLoader::on_connection_start_callback(ConnectionData connection_data, void* user_cookie) {
+void PcapLoader::on_connection_start_callback(pcpp::ConnectionData connection_data, void* user_cookie) {
 
     auto manager = reinterpret_cast<conn_mgr_t*>(user_cookie);
     auto manager_iter = manager->table.find(connection_data.flowKey);
@@ -93,7 +95,7 @@ void PcapLoader::on_connection_start_callback(ConnectionData connection_data, vo
 }
 
 
-void PcapLoader::on_connection_end_callback(ConnectionData connection_data, TcpReassembly::ConnectionEndReason reason, void* user_cookie) {
+void PcapLoader::on_connection_end_callback(pcpp::ConnectionData connection_data, pcpp::TcpReassembly::ConnectionEndReason reason, void* user_cookie) {
 
     auto manager = reinterpret_cast<conn_mgr_t*>(user_cookie);
     auto manager_iter = manager->table.find(connection_data.flowKey);
