@@ -1,18 +1,21 @@
 #include "parser.h"
 #include "logger.h"
 
-#include <iostream>
-
 
 
 int main(int argc, char** argv) {
+
+    if (argc < 2) {
+        logger::logger.error() << "Usage:" << argv[0] << "[*].pcap";
+        return 1;
+    }
 
     PcapLoader foo;
     try {
         foo.parse(argv[1]);
 
     } catch (const std::exception& e) {
-        std::cout << e.what() << std::endl;
+        logger::logger.error() << e.what();
     }
 
     return 0;
