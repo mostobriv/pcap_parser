@@ -36,7 +36,7 @@ endif
 
 
 SOURCES = $(wildcard src/*.cpp)
-HEADERS = $(wildcard src/*.h)
+HEADERS = $(wildcard src/*.h) $(wildcard src/*.hpp)
 OBJECTS = $(patsubst %.cpp,%.o,$(SOURCES))
 BINARY  = parser
 

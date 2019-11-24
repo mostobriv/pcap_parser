@@ -1,8 +1,6 @@
 #include "parser.h"
 #include "logger.h"
 
-
-
 int main(int argc, char** argv) {
 
     if (argc < 2) {
