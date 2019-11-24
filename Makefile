@@ -73,7 +73,7 @@ set-debug:
 
 $(BINARY): $(patsubst src/%.o,objs/%.o,$(OBJECTS))
 	@echo 'Building binary $@'
-	$(CXX) $(FLAGS) $(DEBUG) -o $@ $^ $(SUBMODULE_LIBS_DIR) $(LIBRARIES) $(SUBMODULE_LIBS)
+	$(CXX) $(FLAGS) $(DEBUG) -o $@ $^ $(SUBMODULE_LIBS_DIR) $(SUBMODULE_LIBS) $(LIBRARIES)
 
 
 ## Directories ##

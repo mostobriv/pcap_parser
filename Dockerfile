@@ -12,25 +12,19 @@ RUN apt-get update && \
     libpq-dev \
     libpqxx-dev
 
-RUN git clone https://github.com/seladb/PcapPlusPlus.git
-
-WORKDIR PcapPlusPlus
-RUN ./configure-linux.sh --default
-RUN make all
-RUN make install
-
-RUN git clone https://github.com/fmtlib/fmt /fmt
-RUN mkdir -p /fmt/build
-WORKDIR /fmt/build
-RUN cmake ..
-RUN make install
-
 RUN mkdir /engine
 WORKDIR /engine
+COPY .git/ .git/
+COPY .gitmodules .gitmodules
 
-ADD Makefile Makefile
-ADD src/ src/
+COPY Makefile Makefile
+RUN mkdir -p lib/PcapPlusPlus/
+RUN mkdir -p lib/fmt/
 
+RUN make lib/fmt/build/
+RUN make lib/PcapPlusPlus/mk/platform.mk
+
+COPY src/ src/
 RUN make
 
 ENTRYPOINT /bin/bash
