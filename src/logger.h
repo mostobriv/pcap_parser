@@ -78,7 +78,7 @@ extern Logger logger;
 
 
 template<typename T>
-Logger::logstream operator<<(Logger::logstream&& stream, const T& x)
+inline Logger::logstream operator<<(Logger::logstream&& stream, const T& x)
 {
     if (not stream.alive)  return std::move(stream);
     stream.logger.append_separated(x);
