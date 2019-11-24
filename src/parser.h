@@ -1,17 +1,12 @@
 #pragma once
 
-
-#include "logger.h"
-
+#include <cinttypes>
 #include <map>
 
-#include <TcpReassembly.h>
-#include <PcapLiveDeviceList.h>
-#include <PcapFileDevice.h>
-#include <PlatformSpecificUtils.h>
-#include <SystemUtils.h>
-#include <PcapPlusPlusVersion.h>
 #include <LRUList.h>
+#include <TcpReassembly.h>
+
+#include "logger.h"
 
 
 class PcapLoader
@@ -52,6 +47,8 @@ class PcapLoader
             conn_mgr_t(size_t cache_size) : table(), cache(cache_size) {}
         };
 
+        static logger::Logger logger;
+
 
         bool autoremove;
 
@@ -75,15 +72,11 @@ class PcapLoader
 
 
     public:
-
-        logger::Logger _logger;
-
         PcapLoader(size_t cache_size=64);
         // Watch();
-        bool parse(std::string filename);
+        bool parse(const std::string& filename);
         ~PcapLoader();
 
         inline bool get_autoremove() { return autoremove; };
         inline void set_autoremove(bool state) { autoremove = state; };
-
 };

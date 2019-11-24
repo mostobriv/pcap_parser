@@ -2,8 +2,17 @@
 
 #include <iostream>
 #include <stdexcept>
-#include <utility>
 #include <fmt/format.h>
+
+#include <PcapLiveDeviceList.h>
+#include <PcapFileDevice.h>
+#include <PlatformSpecificUtils.h>
+#include <SystemUtils.h>
+#include <PcapPlusPlusVersion.h>
+
+
+logger::Logger PcapLoader::logger ("PcapLogger");
+
 
 using Side = PcapLoader::Side;
 
@@ -16,16 +25,15 @@ PcapLoader::PcapLoader(size_t cache_size) :
                         &connection_manager,
                         on_connection_start_callback,
                         on_connection_end_callback,
-                        cleanup_configuration),
-            _logger("PcapLoader")
+                        cleanup_configuration)
 {
-    _logger.debug(__PRETTY_FUNCTION__);
+    logger.debug(__PRETTY_FUNCTION__);
 }
 
 
-bool PcapLoader::parse(std::string filename)
+bool PcapLoader::parse(const std::string& filename)
 {
-    _logger.debug(__PRETTY_FUNCTION__);
+    logger.debug(__PRETTY_FUNCTION__);
 
     pcpp::RawPacket rawPacket;
     auto reader = std::unique_ptr<pcpp::IFileReaderDevice>(
@@ -33,15 +41,15 @@ bool PcapLoader::parse(std::string filename)
             );
 
     if (!reader->open()) {
-        throw std::invalid_argument(fmt::format("Can't open file: {}", filename));
+        throw std::invalid_argument("Can't open file: " + filename);
     }
 
     while (reader->getNextPacket(rawPacket)) {
         reassembler.reassemblePacket(&rawPacket);
     }
 
-    auto processed_connections = reassembler.getConnectionInformation().size();
-    _logger.info(fmt::format("Processed {} connections", processed_connections));
+    const auto processed_connections = reassembler.getConnectionInformation().size();
+    logger.info() << "Processed" << processed_connections << "connections";
 
     reassembler.closeAllConnections();
     reader->close();
@@ -52,7 +60,7 @@ bool PcapLoader::parse(std::string filename)
 
 PcapLoader::~PcapLoader()
 {
-    _logger.debug(__PRETTY_FUNCTION__);
+    logger.debug(__PRETTY_FUNCTION__);
 }
 
 
@@ -62,8 +70,9 @@ void PcapLoader::on_message_ready_callback(
         , void* user_cookie
         )
 {
+    logger.debug(__PRETTY_FUNCTION__);
 
-    auto manager = reinterpret_cast<conn_mgr_t*>(user_cookie);
+    auto* const manager = reinterpret_cast<conn_mgr_t*>(user_cookie);
     auto manager_iter = manager->table.find(tcp_data.getConnectionData().flowKey);
 
     // if connection not in the map yet (idk how it's even possible but who the
@@ -101,6 +110,7 @@ void PcapLoader::on_connection_start_callback(
         , void* user_cookie
         )
 {
+    logger.debug(__PRETTY_FUNCTION__);
 
     auto manager = reinterpret_cast<conn_mgr_t*>(user_cookie);
     auto manager_iter = manager->table.find(connection_data.flowKey);
@@ -122,6 +132,7 @@ void PcapLoader::on_connection_end_callback(
         , void* user_cookie
         )
 {
+    logger.debug(__PRETTY_FUNCTION__);
 
     auto manager = reinterpret_cast<conn_mgr_t*>(user_cookie);
     auto manager_iter = manager->table.find(connection_data.flowKey);
