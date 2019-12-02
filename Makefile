@@ -26,7 +26,7 @@ SUBMODULE_LIBS = -lfmt \
 INCLUDES = -I ./lib/fmt/include \
 	   -I lib/PcapPlusPlus/Dist/header
 
-LIBRARIES = -lpcap -lpthread
+LIBRARIES = -lpcap -lpthread -lpqxx
 ifeq ($(STACKTRACE_BACKEND),BACKTRACE_SYSTEM)
 LIBRARIES := $(LIBRARIES) -ldl -lboost_stacktrace_backtrace
 endif
