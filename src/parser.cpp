@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <stdexcept>
-#include <fmt/format.h>
 
 #include <PcapLiveDeviceList.h>
 #include <PcapFileDevice.h>

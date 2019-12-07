@@ -3,8 +3,6 @@
 #include <stdexcept>
 #include <chrono>
 
-#include <fmt/format.h>
-
 #include <boost/stacktrace.hpp>
 #include <boost/exception/all.hpp>
 
@@ -22,7 +20,7 @@ Logger::Logger(const std::string& name, Level level) :
                     m_level(level),
                     m_name(name)
 {
-    m_file_stream.open(fmt::format("logs/{}.log", name)
+    m_file_stream.open("logs/" + name + ".log"
                       ,std::ios::out | std::ios::app);
 }
 
