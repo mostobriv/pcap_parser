@@ -1,4 +1,4 @@
-#include "parser.h"
+#include "PcapLoader.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -13,7 +13,7 @@
 logger::Logger PcapLoader::logger ("PcapLogger");
 
 
-using Side = PcapLoader::Side;
+using Side = StreamData::Side;
 
 
 PcapLoader::PcapLoader(size_t cache_size) :
@@ -63,7 +63,6 @@ PcapLoader::~PcapLoader()
 }
 
 
-std::string buf;
 void PcapLoader::on_message_ready_callback(
           int side, pcpp::TcpStreamData tcp_data
         , void* user_cookie
@@ -84,18 +83,31 @@ void PcapLoader::on_message_ready_callback(
     }
 
     auto& conn_state = manager_iter->second;
+    auto& buf = conn_state.buffer;
 
     if (conn_state.msg_count == 0 || conn_state.current_side != side) {
         conn_state.current_side = static_cast<Side>(side);
+
+        std::string side_str;
+        switch (conn_state.current_side){
+            case StreamData::Side::Unknown:
+                side_str = "Unknown"; break;
+            case StreamData::Side::Client:
+                side_str = "Client"; break;
+            case StreamData::Side::Server:
+                side_str = "Server"; break;
+        }
+
         if (conn_state.msg_count != 0) {
             std::cout << "==============================="
-                         " ! side ! "
-                         "==============================="
+                      << side_str
+                      << "==============================="
                       << std::endl << buf;
         }
         if (buf.back() != '\n') {
             std::cout << std::endl;
         }
+        conn_state.all_data.push_back(buf);
         buf.clear();
     }
     conn_state.msg_count++;
