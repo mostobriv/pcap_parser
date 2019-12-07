@@ -112,7 +112,9 @@ void PcapLoader::on_message_ready_callback(
     }
     conn_state.msg_count++;
 
-    buf += reinterpret_cast<char*>(tcp_data.getData());
+    auto* raw_data = reinterpret_cast<char*>(tcp_data.getData());
+    auto  data_len = tcp_data.getDataLength();
+    buf += std::string(raw_data, data_len);
 }
 
 
