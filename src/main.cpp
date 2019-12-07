@@ -6,7 +6,7 @@
 int main(int argc, char** argv)
 {
     try {
-        pqxx::connection c ("host=localhost port=5432 user=pcap password=pcap_312b4a6b229587d831dd4a05fc83d4f7 dbname=pcap_db");
+        pqxx::connection c ("host=localhost port=5432 user=pcap password=pcap_312b4a6b229587d831dd4a05fc83d4f7");
 
         // Start a transaction.  In libpqxx, you always work in one.
         pqxx::work w(c);
