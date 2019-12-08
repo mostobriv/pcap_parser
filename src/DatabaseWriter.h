@@ -12,6 +12,9 @@
 #include <mutex>
 #include <pqxx/pqxx>
 #include "ThreadQueue.hpp"
+#include "StreamData.h"
+#include "logger.h"
+
 
 class DatabaseWriter
 {
@@ -33,17 +36,21 @@ class DatabaseWriter
         };
         static const ConnectionData DefaultConnData;
 
+        static logger::Logger logger;
+
     private:
-        mutable std::mutex m_mutex;
-        pqxx::connection   m_conn;
+        mutable std::mutex       m_mutex;
+        pqxx::connection         m_conn;
+        ThreadQueue<StreamData>& m_queue;
 
     public:
-                 DatabaseWriter(const ConnectionData& cdata = DefaultConnData);
-//        explicit DatabaseWriter(ThreadQueue&);
+        DatabaseWriter( ThreadQueue<StreamData>&
+                      , const ConnectionData& cdata = DefaultConnData
+                      );
 
         // shows that the thread can be terminated now
         bool is_waiting() const;
 
         void write();
-        void write_one();
+        void write_one(const ConnectionData&);
 };
