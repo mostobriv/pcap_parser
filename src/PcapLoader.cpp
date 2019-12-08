@@ -10,7 +10,7 @@
 #include <PcapPlusPlusVersion.h>
 
 
-logger::Logger PcapLoader::logger ("PcapLogger");
+logger::Logger PcapLoader::logger ("Pcap");
 
 
 using Side = StreamData::Side;
