@@ -16,15 +16,15 @@ logger::Logger PcapLoader::logger ("Pcap");
 using Side = StreamData::Side;
 
 
-PcapLoader::PcapLoader(size_t cache_size) :
-            autoremove(false),
-            connection_manager(cache_size),
-            cleanup_configuration(true, 1, 50),
-            reassembler(on_message_ready_callback,
-                        &connection_manager,
-                        on_connection_start_callback,
-                        on_connection_end_callback,
-                        cleanup_configuration)
+PcapLoader::PcapLoader(ThreadQueue<StreamData>& q, size_t cache_size)
+    : connection_manager(cache_size, q)
+    , cleanup_configuration(true, 1, 50)
+    , reassembler( on_message_ready_callback
+                 , &connection_manager
+                 , on_connection_start_callback
+                 , on_connection_end_callback
+                 , cleanup_configuration
+                 )
 {
     logger.debug(__PRETTY_FUNCTION__);
 }
@@ -138,13 +138,6 @@ void PcapLoader::on_connection_end_callback(
     }
 
     auto& conn_state = manager_iter->second;
-    auto side = conn_state.all_data.start_side;
-    std::cout << "conversation finished\n";
-    for (const auto& reply : conn_state.all_data.data()) {
-        std::cout << "===== " << std::to_string(side) << " =====\n"
-                  << reply << std::endl;
-        side = StreamData::flip_side(side);
-    }
-
+    manager->queue.push(std::move(conn_state.all_data));
     manager->table.erase(manager_iter);
 }

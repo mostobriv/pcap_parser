@@ -8,6 +8,7 @@
 
 #include "StreamData.h"
 #include "logger.h"
+#include "ThreadQueue.hpp"
 
 
 class PcapLoader
@@ -38,15 +39,13 @@ class PcapLoader
         {
             std::map<uint32_t, reassembly_state_t> table;
             pcpp::LRUList<uint32_t> cache;
+            ThreadQueue<StreamData>& queue;
 
-
-            conn_mgr_t(size_t cache_size) : table(), cache(cache_size) {}
+            conn_mgr_t(size_t cache_size, ThreadQueue<StreamData>& q)
+                : table(), cache(cache_size), queue(q) {}
         };
 
         static logger::Logger logger;
-
-
-        bool autoremove;
 
         conn_mgr_t connection_manager;
         pcpp::TcpReassemblyConfiguration cleanup_configuration;
@@ -68,12 +67,8 @@ class PcapLoader
 
 
     public:
-        PcapLoader(size_t cache_size=64);
-        // Watch();
+        PcapLoader(ThreadQueue<StreamData>&, size_t cache_size=64);
         void parse(const std::string& filename);
         void parse_many(const std::vector<std::string>&);
         ~PcapLoader();
-
-        inline bool get_autoremove() { return autoremove; };
-        inline void set_autoremove(bool state) { autoremove = state; };
 };

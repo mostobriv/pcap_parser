@@ -13,7 +13,7 @@ template<typename T>
 class ThreadQueue
 {
     private:
-        std::queue<T> m_queue;
+        std::queue<T>                   m_queue;
         mutable std::condition_variable m_cond;
         mutable std::mutex              m_mutex;
 
@@ -97,8 +97,8 @@ auto ThreadQueue<T>::pop() -> value_type
     std::unique_lock _lock (m_mutex);
 
     // who the fuck thought spurious releases were a good idea?
-    while (m_queue.empty()) {m_cond.wait(_lock);}
-    auto elem = m_queue.front();
+    while (m_queue.empty()) { m_cond.wait(_lock); }
+    value_type elem = std::move(m_queue.front()); //explicitly non-reference
     m_queue.pop();
     return elem;
 }
@@ -129,7 +129,7 @@ auto ThreadQueue<T>::pop(const std::chrono::duration<Rep, Period>& timeout)
             spurious = false;
         }
     }
-    auto elem = m_queue.front();
+    value_type elem = std::move(m_queue.front()); //explicitly non-reference
     m_queue.pop();
     return elem;
 }
