@@ -30,7 +30,7 @@ PcapLoader::PcapLoader(size_t cache_size) :
 }
 
 
-bool PcapLoader::parse(const std::string& filename)
+void PcapLoader::parse(const std::string& filename)
 {
     logger.debug(__PRETTY_FUNCTION__);
 
@@ -52,8 +52,6 @@ bool PcapLoader::parse(const std::string& filename)
 
     reassembler.closeAllConnections();
     reader->close();
-
-    return true;
 }
 
 
@@ -85,28 +83,12 @@ void PcapLoader::on_message_ready_callback(
     auto& conn_state = manager_iter->second;
     auto& buf = conn_state.buffer;
 
-    if (conn_state.msg_count == 0 || conn_state.current_side != side) {
+    if (conn_state.msg_count == 0) {
+        conn_state.current_side = static_cast<Side>(side);
+        conn_state.all_data.start_side = conn_state.current_side;
+    } else if (conn_state.current_side != side) {
         conn_state.current_side = static_cast<Side>(side);
 
-        std::string side_str;
-        switch (conn_state.current_side){
-            case StreamData::Side::Unknown:
-                side_str = "Unknown"; break;
-            case StreamData::Side::Client:
-                side_str = "Client"; break;
-            case StreamData::Side::Server:
-                side_str = "Server"; break;
-        }
-
-        if (conn_state.msg_count != 0) {
-            std::cout << "==============================="
-                      << side_str
-                      << "==============================="
-                      << std::endl << buf;
-        }
-        if (buf.back() != '\n') {
-            std::cout << std::endl;
-        }
         conn_state.all_data.push_back(buf);
         buf.clear();
     }
@@ -153,6 +135,15 @@ void PcapLoader::on_connection_end_callback(
     // kind of mistake??
     if (manager_iter == manager->table.end()) {
         return;
+    }
+
+    auto& conn_state = manager_iter->second;
+    auto side = conn_state.all_data.start_side;
+    std::cout << "conversation finished\n";
+    for (const auto& reply : conn_state.all_data.data()) {
+        std::cout << "===== " << std::to_string(side) << " =====\n"
+                  << reply << std::endl;
+        side = StreamData::flip_side(side);
     }
 
     manager->table.erase(manager_iter);

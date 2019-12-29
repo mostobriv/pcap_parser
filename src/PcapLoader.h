@@ -17,7 +17,7 @@ class PcapLoader
         {
             StreamData::Side current_side;
             uint64_t         msg_count;
-            std::string      buffer;
+            std::string      buffer; // one side data
             StreamData       all_data;
 
             reassembly_state_t() = delete;
@@ -70,7 +70,8 @@ class PcapLoader
     public:
         PcapLoader(size_t cache_size=64);
         // Watch();
-        bool parse(const std::string& filename);
+        void parse(const std::string& filename);
+        void parse_many(const std::vector<std::string>&);
         ~PcapLoader();
 
         inline bool get_autoremove() { return autoremove; };
