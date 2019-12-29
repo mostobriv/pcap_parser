@@ -102,7 +102,7 @@ void DatabaseWriter::write_one(const StreamData& stream)
     std::vector<unsigned char> concat;
     std::string switches;
 
-    size_t size;
+    size_t size = 0;
     for (const auto& reply : stream.data()) {
         size += reply.size();
     }
@@ -122,15 +122,11 @@ void DatabaseWriter::write_one(const StreamData& stream)
     }
     switches.back() = '}';
 
-    if (concat_last != concat.data() + size) {
-        logger.error() << "I dun fucked up";
-    }
-
     // create a binary string from concat and write that to db
 
     auto bin_str = pqxx::binarystring(concat.data(), concat.size());
     pqxx::work w (m_conn);
-    auto query_text = "INSET INTO streams (data, replies) VALUES ($1, $2)";
+    auto query_text = "INSERT INTO streams (data, replies) VALUES ($1, $2)";
     logger.debug() << query_text;
     w.parameterized(query_text)(bin_str)(switches).exec();
 
