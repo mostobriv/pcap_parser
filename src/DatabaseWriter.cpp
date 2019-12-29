@@ -3,6 +3,7 @@
 #include <set>
 #include <tuple>
 #include <string>
+#include <cstring>
 
 
 const DatabaseWriter::ConnectionData DatabaseWriter::DefaultConnData =
@@ -84,7 +85,47 @@ void DatabaseWriter::write()
 }
 
 
-void DatabaseWriter::write_one(const ConnectionData&)
+void DatabaseWriter::write_one(const StreamData& stream)
 {
     std::lock_guard _lock (m_mutex);
+
+    // first we concatenate all streams and collect reply offsets into a
+    // prepared string
+
+    std::vector<unsigned char> concat;
+    std::string switches;
+
+    size_t size;
+    for (const auto& reply : stream.data()) {
+        size += reply.size();
+    }
+    concat.resize(size);
+    switches.reserve(size * 4 + 2); // 3 characters for a digit + a comma + braces
+
+    int current_offset = 0;
+    auto* concat_last = concat.data();
+    switches.push_back('{');
+
+    for (const auto& reply : stream.data()) {
+        std::memcpy( concat_last, reply.data(), reply.size() );
+        concat_last += reply.size();
+
+        current_offset += reply.size();
+        switches.append( std::to_string(current_offset) + "," );
+    }
+    switches.back() = '}';
+
+    if (concat_last != concat.data() + size) {
+        logger.error() << "I dun fucked up";
+    }
+
+    // create a binary string from concat and write that to db
+
+    auto bin_str = pqxx::binarystring(concat.data(), concat.size());
+    pqxx::work w (m_conn);
+    auto query_text = "INSET INTO streams (data, replies) VALUES ($1, $2)";
+    logger.debug() << query_text;
+    w.parameterized(query_text)(bin_str)(switches).exec();
+
+    w.commit();
 }

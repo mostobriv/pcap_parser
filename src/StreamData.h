@@ -38,4 +38,38 @@ class StreamData
 
         void push_back(const std::string&);
         void push_back(std::string&&);
+
+        inline const std::vector<std::string>& data() const
+        {
+            return *m_data;
+        }
+
+        inline static Side flip_side(Side side)
+        {
+            switch (side) {
+                case Side::Client:
+                    return Side::Server;
+                case Side::Server:
+                    return Side::Client;
+                default:
+                    return Side::Unknown;
+            }
+        }
 };
+
+
+namespace std
+{
+    inline std::string to_string(StreamData::Side side)
+    {
+        switch (side) {
+            case StreamData::Side::Unknown:
+                return "Unknown";
+            case StreamData::Side::Client:
+                return "Client";
+            case StreamData::Side::Server:
+                return "Server";
+        }
+        return "Undefined";
+    }
+}

@@ -47,10 +47,13 @@ class DatabaseWriter
         DatabaseWriter( ThreadQueue<StreamData>&
                       , const ConnectionData& cdata = DefaultConnData
                       );
+        DatabaseWriter() = delete;
+        DatabaseWriter(const DatabaseWriter&) = delete;
+        DatabaseWriter(DatabaseWriter&&) = delete;
 
         // shows that the thread can be terminated now
         bool is_waiting() const;
 
         void write();
-        void write_one(const ConnectionData&);
+        void write_one(const StreamData&);
 };
