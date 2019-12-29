@@ -42,6 +42,9 @@ class DatabaseWriter
         mutable std::mutex       m_mutex;
         pqxx::connection         m_conn;
         ThreadQueue<StreamData>& m_queue;
+        bool                     m_is_waiting;
+
+        void write_one(const StreamData&);
 
     public:
         DatabaseWriter( ThreadQueue<StreamData>&
@@ -55,5 +58,4 @@ class DatabaseWriter
         bool is_waiting() const;
 
         void write();
-        void write_one(const StreamData&);
 };

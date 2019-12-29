@@ -75,20 +75,27 @@ DatabaseWriter::DatabaseWriter( ThreadQueue<StreamData>& queue
 
 bool DatabaseWriter::is_waiting() const
 {
-    return false;
+    return m_is_waiting;
 }
 
 
 void DatabaseWriter::write()
 {
     std::lock_guard _lock (m_mutex);
+
+    while (true) {
+        m_is_waiting = true;
+        logger.debug() << "wait for next stream";
+        auto stream = m_queue.pop();
+        logger.debug() << "got stream";
+        m_is_waiting = false;
+        this->write_one(stream);
+    }
 }
 
 
 void DatabaseWriter::write_one(const StreamData& stream)
 {
-    std::lock_guard _lock (m_mutex);
-
     // first we concatenate all streams and collect reply offsets into a
     // prepared string
 
