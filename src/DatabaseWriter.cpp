@@ -5,6 +5,8 @@
 #include <string>
 #include <cstring>
 
+using namespace std::literals::chrono_literals;
+
 
 const DatabaseWriter::ConnectionData DatabaseWriter::DefaultConnData =
     {"localhost", 5432, "pcap", "pcap_312b4a6b229587d831dd4a05fc83d4f7"};
@@ -73,29 +75,43 @@ DatabaseWriter::DatabaseWriter( ThreadQueue<StreamData>& queue
 }
 
 
-bool DatabaseWriter::is_waiting() const
+bool DatabaseWriter::should_stop() const
 {
-    return m_is_waiting;
+    return m_should_stop;
+}
+DatabaseWriter& DatabaseWriter::set_should_stop(bool arg)
+{
+    m_should_stop = arg;
+    return *this;
 }
 
 
 void DatabaseWriter::write()
 {
     std::lock_guard _lock (m_mutex);
+    logger.debug() << "wait for first stream";
 
     while (true) {
-        m_is_waiting = true;
-        logger.debug() << "wait for next stream";
-        auto stream = m_queue.pop();
-        logger.debug() << "got stream";
-        m_is_waiting = false;
-        this->write_one(stream);
+        auto mb_stream = m_queue.pop(1s);
+
+        if (not mb_stream.has_value() and m_should_stop) {
+            logger.info() << "shutting down writer";
+            break;
+
+        } else if (mb_stream.has_value()) {
+            logger.debug() << "got stream";
+            this->write_one(*mb_stream);
+            logger.debug() << "wait for next stream";
+        }
     }
 }
 
 
 void DatabaseWriter::write_one(const StreamData& stream)
 {
+    if (stream.data().empty()) {
+        return;
+    }
     // first we concatenate all streams and collect reply offsets into a
     // prepared string
 

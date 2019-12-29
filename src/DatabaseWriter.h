@@ -42,7 +42,7 @@ class DatabaseWriter
         mutable std::mutex       m_mutex;
         pqxx::connection         m_conn;
         ThreadQueue<StreamData>& m_queue;
-        bool                     m_is_waiting;
+        bool                     m_should_stop;
 
         void write_one(const StreamData&);
 
@@ -55,7 +55,8 @@ class DatabaseWriter
         DatabaseWriter(DatabaseWriter&&) = delete;
 
         // shows that the thread can be terminated now
-        bool is_waiting() const;
+        bool should_stop() const;
+        DatabaseWriter& set_should_stop(bool);
 
         void write();
 };
