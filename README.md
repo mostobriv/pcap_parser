@@ -2,7 +2,7 @@
 Pcap parser mostly made for pahan tool
 
 ## Requirements
-`apt install libpcap-dev libboost-stacktrace-dev`
+`apt install libpcap-dev libboost-stacktrace-dev libpqxx-dev`
 
 # TODO:
 - [X] ~~Make skeleton~~
