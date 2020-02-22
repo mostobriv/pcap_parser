@@ -1,2 +1,4 @@
 objs/
 parser
+.tags
+logs

@@ -13,7 +13,7 @@ STACKTRACE_BACKEND = NONE
 # Remember to also add recipies for those
 LIB_PREBUILT = lib/fmt/build/ \
                lib/PcapPlusPlus/mk/platform.mk \
-               lib/inotify-cpp/build/Makefile
+               lib/inotify-cpp/build/src/libinotify-cpp.a
 
 #submodule libraries
 SUBMODULE_LIBS_DIR = -L ./lib/fmt/build \
@@ -106,17 +106,18 @@ lib/PcapPlusPlus/mk/platform.mk:
 	@echo 'Building submodule PcapPlusPlus'
 	@$(MAKE) -C lib/PcapPlusPlus/ libs
 
-lib/inotify-cpp/build/Makefile:
+lib/inotify-cpp/build/src/libinotify-cpp.a: lib/inotify-cpp/build
+	@echo 'Building submodule inotify-cpp'
+	@cd lib/inotify-cpp/build/ && cmake ..
+	@$(MAKE) -C lib/inotify-cpp/build
+lib/inotify-cpp/build:
 	@echo 'Initializing submodule $@'
 	@cd lib/inotify-cpp/ && git submodule update --init
 	@mkdir lib/inotify-cpp/build
 	#
-	@sed -i 's/\(add_library(${LIB_NAME} \)SHARED\( ${LIB_SRCS} ${LIB_HEADER})\)/\1STATIC\2/' lib/inotify-cpp/src/CMakeLists.txt
+	@echo 'Modifying inotify-cpp cmake file'
+	@sed -i 's/\(add_library($${LIB_NAME} \)SHARED\( $${LIB_SRCS} $${LIB_HEADER})\)/\1STATIC\2/' lib/inotify-cpp/src/CMakeLists.txt
 	@sed -i '/test/d; /example/d; /^$$/d'  lib/inotify-cpp/CMakeLists.txt
-	#
-	@echo 'Building submodule inotify-cpp'
-	@cd lib/inotify-cpp/build/ && cmake ..
-	@$(MAKE) -C lib/inotify-cpp/build
 
 
 ## Clean ##
