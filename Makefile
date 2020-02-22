@@ -12,19 +12,23 @@ STACKTRACE_BACKEND = NONE
 # This is used only so the libraries are built before the project itself is built,
 # Remember to also add recipies for those
 LIB_PREBUILT = lib/fmt/build/ \
-               lib/PcapPlusPlus/mk/platform.mk
+               lib/PcapPlusPlus/mk/platform.mk \
+               lib/inotify-cpp/build/Makefile
 
 #submodule libraries
 SUBMODULE_LIBS_DIR = -L ./lib/fmt/build \
-		     -L ./lib/PcapPlusPlus/Dist
+                     -L ./lib/inotify-cpp/build/src \
+                     -L ./lib/PcapPlusPlus/Dist
 SUBMODULE_LIBS = -lfmt \
+                 -linotify-cpp \
                  -lPcap++ \
                  -lPacket++ \
                  -lCommon++
 
 #submodule include dirs
 INCLUDES = -I ./lib/fmt/include \
-	   -I lib/PcapPlusPlus/Dist/header
+           -I ./lib/inotify-cpp/src/include \
+           -I ./lib/PcapPlusPlus/Dist/header
 
 LIBRARIES = -lpcap -lpthread
 ifeq ($(STACKTRACE_BACKEND),BACKTRACE_SYSTEM)
@@ -101,6 +105,18 @@ lib/PcapPlusPlus/mk/platform.mk:
 	#
 	@echo 'Building submodule PcapPlusPlus'
 	@$(MAKE) -C lib/PcapPlusPlus/ libs
+
+lib/inotify-cpp/build/Makefile:
+	@echo 'Initializing submodule $@'
+	@cd lib/inotify-cpp/ && git submodule update --init
+	@mkdir lib/inotify-cpp/build
+	#
+	@sed -i 's/\(add_library(${LIB_NAME} \)SHARED\( ${LIB_SRCS} ${LIB_HEADER})\)/\1STATIC\2/' lib/inotify-cpp/src/CMakeLists.txt
+	@sed -i '/test/d; /example/d; /^$$/d'  lib/inotify-cpp/CMakeLists.txt
+	#
+	@echo 'Building submodule inotify-cpp'
+	@cd lib/inotify-cpp/build/ && cmake ..
+	@$(MAKE) -C lib/inotify-cpp/build
 
 
 ## Clean ##

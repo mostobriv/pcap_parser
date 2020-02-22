@@ -1,6 +1,9 @@
 # pcap_parser
 Pcap parser mostly made for pahan tool
 
+## Requirements
+`apt install libpcap-dev libboost-stacktrace-dev libpqxx-dev libboost-system-dev libboost-filesystem-dev`
+
 # TODO:
 - [X] ~~Make skeleton~~
 - [ ] Complete first version of parser module
