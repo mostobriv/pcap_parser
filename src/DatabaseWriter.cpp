@@ -22,16 +22,41 @@ DatabaseWriter::DatabaseWriter( ThreadQueue<StreamData>& queue
 {
     // Do auto migrations
 
+    // This describes all fields in table 'streams'. Add new fields here and it
+    // will migrate automatically. First is name, second is type as it appears
+    // in information schema, third is type as it is passed to "create table"
+    // or "alter table" commands
+    std::set< std::tuple< std::string, std::string, std::string > > expected_cols =
+        { {"id",      "integer", "SERIAL PRIMARY KEY"}
+        , {"data",    "bytea",   "BYTEA"}
+        , {"replies", "ARRAY",   "INTEGER ARRAY"}
+        };
+    auto is_expected = [&] (const auto& a_name, const auto& a_show_type) {
+        auto it = expected_cols.begin();
+        for (; it != expected_cols.end(); ++it) {
+            const auto& [name, show_type, _] = *it;
+            (void)_; //fuck me
+            if (name == a_name and show_type == a_show_type) {
+                return it;
+            }
+        }
+        return it; //which now points to .end()
+    };
+
     pqxx::work w (m_conn);
     pqxx::result res;
 
-    // Create tables
-    auto create_command =
-        "CREATE TABLE IF NOT EXISTS streams "
-        "( id SERIAL PRIMARY KEY"
-        ", data BYTEA"
-        ", replies INTEGER ARRAY"
-        ");";
+    // Build command to create table
+    std::string create_command =
+        "CREATE TABLE IF NOT EXISTS streams \n"
+        "( id SERIAL PRIMARY KEY";
+    for (const auto& [name, _, construct_type] : expected_cols) {
+        (void)_; //fuck me
+        if (name == "id") continue;
+        create_command += "\n, " + name + " " + construct_type;
+    }
+    create_command += "\n);";
+
     logger.debug() << create_command;
     w.exec(create_command);
 
@@ -42,30 +67,27 @@ DatabaseWriter::DatabaseWriter( ThreadQueue<StreamData>& queue
         " WHERE table_name = 'streams';"
     );
 
-    std::set< std::tuple< std::string, std::string > > expected_cols =
-        { {"id",       "integer"}
-        , {"data",     "bytea"}
-        , {"replies", "ARRAY"}
-        };
-
     for (const auto& row : res) {
         const auto& name = row[0].as<std::string>();
         const auto& type = row[1].as<std::string>();
 
-        auto it = expected_cols.find({name, type});
+        auto it = is_expected(name, type);
         if (it == expected_cols.end()) {
-            logger.warning() << "Column `" << name << ":" << type
+            logger.warning()
+                << "Column `" << name << ":" << type
                 << "` exists in database, but is not specified in migration policy";
+        } else {
+            expected_cols.erase(it);
         }
-        expected_cols.erase(it);
     }
 
     // create missing columns
-    for (const auto& [name, type] : expected_cols) {
+    for (const auto& [name, _, construct_type] : expected_cols) {
+        (void)_; //fuck me
         auto alter_command =
             " ALTER TABLE streams"
             " ADD COLUMN "
-            + name + " " + type +
+            + name + " " + construct_type +
             ";";
         logger.debug() << alter_command;
         w.exec(alter_command);
@@ -96,7 +118,7 @@ void DatabaseWriter::write()
 
         if (not mb_stream.has_value() and m_should_stop) {
             logger.info() << "shutting down writer";
-            break;
+            return;
 
         } else if (mb_stream.has_value()) {
             logger.debug() << "got stream";

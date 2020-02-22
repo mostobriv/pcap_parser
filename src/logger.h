@@ -97,7 +97,7 @@ inline Logger::logstream Logger::log(Level lvl)
 }
 
 template<typename T>
-Logger::logstream Logger::log(Level lvl, const T& x)
+inline Logger::logstream Logger::log(Level lvl, const T& x)
 {
     auto&& stream = log(lvl);
     if (lvl >= m_level) {
@@ -115,7 +115,7 @@ inline void Logger::endl()
 }
 
 template<typename T>
-void Logger::append(const T& x)
+inline void Logger::append(const T& x)
 {
     std::cerr << x;
     if (m_file_stream.is_open()) {
@@ -123,7 +123,7 @@ void Logger::append(const T& x)
     }
 }
 template<typename T>
-void Logger::append_separated(const T& x)
+inline void Logger::append_separated(const T& x)
 {
     std::cerr << ' ' << x;
     if (m_file_stream.is_open()) {
