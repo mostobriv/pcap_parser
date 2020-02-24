@@ -93,7 +93,7 @@ inline Logger::logstream Logger::log(Level lvl)
     if (lvl < m_level) {
         stream.alive = false;
     }
-    return std::move(stream);
+    return stream;
 }
 
 template<typename T>

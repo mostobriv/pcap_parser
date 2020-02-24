@@ -51,7 +51,7 @@ else
 FLAGS := $(FLAGS) -DBOOST_STACKTRACE_USE_NOOP
 endif
 
-WARNINGS = -Wall -Wextra -Werror -Wno-unused-parameter
+WARNINGS = -Wall -Wextra -Werror -Wno-unused-parameter -Wno-deprecated-declarations
 
 
 DEBUG = 
