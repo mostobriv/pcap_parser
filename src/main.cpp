@@ -1,10 +1,15 @@
 #include <thread>
+#include <csignal>
+#include <functional>
 
 #include "StreamData.h"
 #include "ThreadQueue.hpp"
 #include "PcapLoader.h"
 #include "DatabaseWriter.h"
 #include "logger.h"
+
+
+void set_sigint_handler(std::function<void()>&&);
 
 
 int main(int argc, char** argv)
@@ -17,15 +22,27 @@ int main(int argc, char** argv)
     }
 
     try {
+        // start real workers
         auto loader = PcapLoader(queue);
         auto writer = DatabaseWriter(queue);
 
         auto loader_thread = std::thread([&] {
             loader.parse(argv[1]);
         });
-
         auto writer_thread = std::thread([&] {
             writer.write();
+        });
+
+        // set handler for graceful stopping
+        bool ctrlc_pressed = false;
+        set_sigint_handler([&] {
+            if (ctrlc_pressed) {
+                logger::logger.warning() << "Stopping immediately";
+                exit(1);
+            } else {
+                ctrlc_pressed = true;
+                logger::logger.warning() << "Press again to stop immediately";
+            }
         });
 
         loader_thread.join();
@@ -55,4 +72,22 @@ int main(int argc, char** argv)
     */
 
     return 0;
+}
+
+
+std::function<void()> global_signal_handler = [](){};
+void signal_handler(int)
+{
+    global_signal_handler();
+}
+
+void set_sigint_handler(std::function<void()>&& handler)
+{
+    global_signal_handler = handler;
+
+    struct sigaction sig_int_handler;
+    sig_int_handler.sa_handler = signal_handler;
+    sigemptyset(&sig_int_handler.sa_mask);
+    sig_int_handler.sa_flags = 0;
+    sigaction(SIGINT, &sig_int_handler, NULL);
 }
