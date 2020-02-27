@@ -12,45 +12,56 @@
 void set_sigint_handler(std::function<void()>&&);
 
 
-int main(int argc, char** argv)
+int main(int argc, const char** argv)
 {
-    ThreadQueue<StreamData> queue;
+    ThreadQueue<StreamData> data_queue;
+    ThreadQueue<std::string> file_queue;
 
     if (argc < 2) {
         logger::logger.error() << "Usage:" << argv[0] << "[*].pcap";
         return 1;
     }
 
+    // add all files provided on command line
+    for (int i = 1; i < argc; ++i) {
+        file_queue.emplace(argv[i]);
+        logger::logger.debug() << "add file" << argv[i];
+    }
+
     try {
         // start real workers
-        auto loader = PcapLoader(queue);
-        auto writer = DatabaseWriter(queue);
+        auto loader = PcapLoader(data_queue, file_queue);
+        auto writer = DatabaseWriter(data_queue);
 
         auto loader_thread = std::thread([&] {
-            loader.parse(argv[1]);
+            loader.start_parsing();
         });
         auto writer_thread = std::thread([&] {
-            writer.write();
+            writer.start_writing();
         });
 
         // set handler for graceful stopping
         bool ctrlc_pressed = false;
         set_sigint_handler([&] {
             if (ctrlc_pressed) {
-                logger::logger.warning() << "Stopping immediately";
+                std::cout << "\b\b";
+                logger::logger.info() << "Stopping immediately";
                 exit(1);
             } else {
                 ctrlc_pressed = true;
-                logger::logger.warning() << "Press again to stop immediately";
+                std::cout << "\b\bPress again to stop immediately" << std::endl;
             }
         });
 
+        loader.set_should_stop();
         loader_thread.join();
-        while (not queue.empty()) {
+
+        while (not data_queue.empty()) {
             // wait for the writer to get all values
             std::this_thread::yield();
         }
-        writer.set_should_stop(true);
+
+        writer.set_should_stop();
         writer_thread.join();
 
     } catch (const std::exception &e) {

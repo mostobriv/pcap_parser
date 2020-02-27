@@ -108,7 +108,7 @@ DatabaseWriter& DatabaseWriter::set_should_stop(bool arg)
 }
 
 
-void DatabaseWriter::write()
+void DatabaseWriter::start_writing()
 {
     std::lock_guard _lock (m_mutex);
     logger.debug() << "wait for first stream";

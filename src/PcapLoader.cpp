@@ -9,15 +9,22 @@
 #include <SystemUtils.h>
 #include <PcapPlusPlusVersion.h>
 
+using namespace std::literals::chrono_literals;
 
-logger::Logger PcapLoader::logger ("Pcap");
+
+logger::Logger PcapLoader::logger ("Pcap", logger::Level::LVL_DEBUG);
 
 
 using Side = StreamData::Side;
 
 
-PcapLoader::PcapLoader(ThreadQueue<StreamData>& q, size_t cache_size)
-    : connection_manager(cache_size, q)
+PcapLoader::PcapLoader( ThreadQueue<StreamData>& data_queue
+                      , ThreadQueue<std::string>& file_queue
+                      , size_t cache_size
+                      )
+    : connection_manager(cache_size, data_queue)
+    , m_file_queue(file_queue)
+    , m_should_stop(false)
     , cleanup_configuration(true, 1, 50)
     , reassembler( on_message_ready_callback
                  , &connection_manager
@@ -26,14 +33,31 @@ PcapLoader::PcapLoader(ThreadQueue<StreamData>& q, size_t cache_size)
                  , cleanup_configuration
                  )
 {
-    logger.debug(__PRETTY_FUNCTION__);
 }
 
 
-void PcapLoader::parse(const std::string& filename)
+void PcapLoader::start_parsing()
 {
-    logger.debug(__PRETTY_FUNCTION__);
+    logger.debug() << "Start getting file names";
 
+    while (true) {
+        auto mb_file = m_file_queue.pop(1s);
+
+        if (mb_file.has_value()) {
+            logger.debug() << "got new file";
+            this->parse_one(*mb_file);
+            logger.debug() << "wait for next file";
+        } else if (not mb_file.has_value() and m_should_stop) {
+            logger.info() << "shutting down parser";
+            return;
+
+        }
+    }
+}
+
+
+void PcapLoader::parse_one(const std::string& filename)
+{
     pcpp::RawPacket rawPacket;
     auto reader = std::unique_ptr<pcpp::IFileReaderDevice>(
             pcpp::IFileReaderDevice::getReader(filename.c_str())
@@ -57,7 +81,6 @@ void PcapLoader::parse(const std::string& filename)
 
 PcapLoader::~PcapLoader()
 {
-    logger.debug(__PRETTY_FUNCTION__);
 }
 
 
@@ -66,8 +89,6 @@ void PcapLoader::on_message_ready_callback(
         , void* user_cookie
         )
 {
-    logger.debug(__PRETTY_FUNCTION__);
-
     auto* const manager = reinterpret_cast<conn_mgr_t*>(user_cookie);
     auto manager_iter = manager->table.find(tcp_data.getConnectionData().flowKey);
 
@@ -105,8 +126,6 @@ void PcapLoader::on_connection_start_callback(
         , void* user_cookie
         )
 {
-    logger.debug(__PRETTY_FUNCTION__);
-
     auto manager = reinterpret_cast<conn_mgr_t*>(user_cookie);
     auto manager_iter = manager->table.find(connection_data.flowKey);
 
@@ -127,8 +146,6 @@ void PcapLoader::on_connection_end_callback(
         , void* user_cookie
         )
 {
-    logger.debug(__PRETTY_FUNCTION__);
-
     auto manager = reinterpret_cast<conn_mgr_t*>(user_cookie);
     auto manager_iter = manager->table.find(connection_data.flowKey);
 
@@ -140,4 +157,15 @@ void PcapLoader::on_connection_end_callback(
     auto& conn_state = manager_iter->second;
     manager->queue.push(std::move(conn_state.all_data));
     manager->table.erase(manager_iter);
+}
+
+
+bool PcapLoader::should_stop() const
+{
+    return m_should_stop;
+}
+PcapLoader& PcapLoader::set_should_stop(bool should)
+{
+    m_should_stop = should;
+    return *this;
 }

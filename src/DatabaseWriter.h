@@ -26,7 +26,7 @@ class DatabaseWriter
             std::string user;
             std::string password;
 
-            std::string to_pq_string() const
+            inline std::string to_pq_string() const
             {
                 return  "host=" + host
                      + " port=" + std::to_string(port)
@@ -56,7 +56,7 @@ class DatabaseWriter
 
         // shows that the thread can be terminated now
         bool should_stop() const;
-        DatabaseWriter& set_should_stop(bool);
+        DatabaseWriter& set_should_stop(bool should = true);
 
-        void write();
+        void start_writing();
 };

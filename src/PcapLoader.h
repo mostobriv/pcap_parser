@@ -48,6 +48,8 @@ class PcapLoader
         static logger::Logger logger;
 
         conn_mgr_t connection_manager;
+        ThreadQueue<std::string>& m_file_queue;
+        bool m_should_stop;
         pcpp::TcpReassemblyConfiguration cleanup_configuration;
         pcpp::TcpReassembly reassembler;
 
@@ -67,8 +69,15 @@ class PcapLoader
 
 
     public:
-        PcapLoader(ThreadQueue<StreamData>&, size_t cache_size=64);
-        void parse(const std::string& filename);
+        PcapLoader( ThreadQueue<StreamData>&, ThreadQueue<std::string>&
+                  , size_t cache_size=64
+                  );
+        void start_parsing();
+        void parse_one(const std::string& filename);
         void parse_many(const std::vector<std::string>&);
+
+        bool should_stop() const;
+        PcapLoader& set_should_stop(bool should = true);
+
         ~PcapLoader();
 };
