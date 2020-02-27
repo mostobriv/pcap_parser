@@ -36,7 +36,7 @@ class DatabaseWriter
         };
         static const ConnectionData DefaultConnData;
 
-        static logger::Logger logger;
+        static logger::Logger<logger::Level::LVL_DEBUG> logger;
 
     private:
         mutable std::mutex       m_mutex;

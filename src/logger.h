@@ -2,6 +2,13 @@
 
 #include <iostream>
 #include <fstream>
+#include <chrono>
+#include <iomanip>
+
+#include <boost/stacktrace.hpp>
+#include <boost/exception/all.hpp>
+
+#include "termcolor.hpp"
 
 
 namespace logger
@@ -9,6 +16,7 @@ namespace logger
 
 enum Level {LVL_DEBUG=0, LVL_INFO, LVL_WARNING, LVL_ERROR, LVL_SILENT};
 
+template <Level loglevel>
 class Logger
 {
     // stream that automatically inserts newline when writing is finished
@@ -27,10 +35,14 @@ class Logger
         logstream(const logstream&) = delete;
         inline ~logstream() {if (alive) logger.endl();}
     };
-    template<typename T> friend logstream operator<< (logstream&&, const T&);
+    template<typename T> friend inline logstream operator<< (logstream&& stream, const T& x)
+    {
+        if (not stream.alive)  return std::move(stream);
+        stream.logger.append_separated(x);
+        return std::move(stream);
+    }
 
     private:
-        Level         m_level;
         std::string   m_name;
         std::ofstream m_file_stream;
 
@@ -43,15 +55,13 @@ class Logger
         template<typename T> void append_separated(const T&);
 
     public:
-        Logger(const std::string& name, const Level=LVL_INFO);
+        Logger(const std::string& name);
 
         Logger() = delete;
         Logger(const Logger&) = delete;
         Logger(Logger&&) = delete;
         void operator=(const Logger&) = delete;
         void operator=(Logger&&) = delete;
-
-        inline void set_log_level(Level lvl) {m_level = lvl;}
 
 
         // Main logging functions. Can be used to log one thing or to start
@@ -74,39 +84,33 @@ class Logger
 };
 
 // Global logger
-extern Logger logger;
+extern Logger<LVL_DEBUG> logger;
 
 
-template<typename T>
-inline Logger::logstream operator<<(Logger::logstream&& stream, const T& x)
-{
-    if (not stream.alive)  return std::move(stream);
-    stream.logger.append_separated(x);
-    return std::move(stream);
-}
-
-
-inline Logger::logstream Logger::log(Level lvl)
+template <Level loglevel>
+inline typename Logger<loglevel>::logstream Logger<loglevel>::log(Level lvl)
 {
     header(lvl);
     logstream stream (*this);
-    if (lvl < m_level) {
+    if (lvl < loglevel) {
         stream.alive = false;
     }
     return stream;
 }
 
+template<Level loglevel>
 template<typename T>
-inline Logger::logstream Logger::log(Level lvl, const T& x)
+inline typename Logger<loglevel>::logstream Logger<loglevel>::log(Level lvl, const T& x)
 {
     auto&& stream = log(lvl);
-    if (lvl >= m_level) {
+    if (lvl >= loglevel) {
         append_separated(x);
     }
     return std::move(stream);
 }
 
-inline void Logger::endl()
+template <Level loglevel>
+inline void Logger<loglevel>::endl()
 {
     std::cerr << std::endl;
     if (m_file_stream.is_open()) {
@@ -114,21 +118,84 @@ inline void Logger::endl()
     }
 }
 
+template<Level loglevel>
 template<typename T>
-inline void Logger::append(const T& x)
+inline void Logger<loglevel>::append(const T& x)
 {
     std::cerr << x;
     if (m_file_stream.is_open()) {
         m_file_stream << x;
     }
 }
+template<Level loglevel>
 template<typename T>
-inline void Logger::append_separated(const T& x)
+inline void Logger<loglevel>::append_separated(const T& x)
 {
     std::cerr << ' ' << x;
     if (m_file_stream.is_open()) {
         m_file_stream << ' ' << x;
     }
+}
+
+
+template <Level loglevel>
+Logger<loglevel>::Logger(const std::string& name)
+    : m_name (name)
+{
+    m_file_stream.open("logs/" + name + ".log"
+                      ,std::ios::out | std::ios::app);
+}
+
+
+template <Level loglevel>
+void Logger<loglevel>::header(Level lvl)
+{
+    if (lvl < loglevel)  return;
+    // print current time
+    auto time = std::chrono::system_clock::now();
+    auto time_c = std::chrono::system_clock::to_time_t(time);
+    append(std::put_time(std::localtime(&time_c), "%F %T"));
+
+    // print colored level info
+    append(" [");
+    switch (lvl) {
+        case LVL_DEBUG:
+            append(termcolor::green);
+            append(" DEBUG ");
+            break;
+        case LVL_INFO:
+            append(termcolor::cyan);
+            append(" INFO  ");
+            break;
+        case LVL_WARNING:
+            append(termcolor::yellow);
+            append("WARNING");
+            break;
+        case LVL_ERROR:
+            append(termcolor::red);
+            append(" ERROR ");
+            break;
+        default:
+            break;
+    }
+    append(termcolor::reset);
+    append("] [");
+
+    append(m_name);
+    append("]");
+}
+
+
+template <Level loglevel>
+void Logger<loglevel>::exception(const std::exception& e)
+{
+    const boost::stacktrace::stacktrace* st =
+        boost::get_error_info<
+            boost::error_info<struct tag_stacktrace, boost::stacktrace::stacktrace>
+        >(e);
+    (st ? error() << *st
+        : error() << "Exception:"
+        ) << e.what();
 }
 
 }; // namespace logger

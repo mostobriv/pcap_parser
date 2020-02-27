@@ -45,7 +45,7 @@ class PcapLoader
                 : table(), cache(cache_size), queue(q) {}
         };
 
-        static logger::Logger logger;
+        static logger::Logger<logger::Level::LVL_DEBUG> logger;
 
         conn_mgr_t connection_manager;
         ThreadQueue<std::string>& m_file_queue;

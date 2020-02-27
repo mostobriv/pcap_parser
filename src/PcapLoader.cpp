@@ -12,7 +12,7 @@
 using namespace std::literals::chrono_literals;
 
 
-logger::Logger PcapLoader::logger ("Pcap", logger::Level::LVL_DEBUG);
+logger::Logger<logger::Level::LVL_DEBUG> PcapLoader::logger ("Pcap");
 
 
 using Side = StreamData::Side;

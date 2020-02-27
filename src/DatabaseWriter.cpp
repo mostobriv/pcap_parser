@@ -11,7 +11,7 @@ using namespace std::literals::chrono_literals;
 const DatabaseWriter::ConnectionData DatabaseWriter::DefaultConnData =
     {"localhost", 5432, "pcap", "pcap_312b4a6b229587d831dd4a05fc83d4f7"};
 
-logger::Logger DatabaseWriter::logger ("Database", logger::Level::LVL_DEBUG);
+logger::Logger<logger::Level::LVL_DEBUG> DatabaseWriter::logger ("Database");
 
 
 DatabaseWriter::DatabaseWriter( ThreadQueue<StreamData>& queue
