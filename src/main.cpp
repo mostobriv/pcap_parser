@@ -49,7 +49,10 @@ int main(int argc, const char** argv)
                 exit(1);
             } else {
                 ctrlc_pressed = true;
-                std::cout << "\b\bPress again to stop immediately" << std::endl;
+                std::cout << "\b\bGracefully stopping. Press again to stop immediately"
+                          << std::endl;
+                writer.set_should_stop();
+                loader.set_should_stop();
             }
         });
 
