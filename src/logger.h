@@ -35,7 +35,7 @@ class Logger
         logstream(const logstream&) = delete;
         inline ~logstream() {if (alive) logger.endl();}
     };
-    template<typename T> friend inline logstream operator<< (logstream&& stream, const T& x)
+    template <typename T> friend inline logstream operator<< (logstream&& stream, const T& x)
     {
         if (not stream.alive)  return std::move(stream);
         stream.logger.append_separated(x);
@@ -47,12 +47,12 @@ class Logger
         std::ofstream m_file_stream;
 
         // generic printing, combined by public logging functions
-        void header(Level);
-        inline logstream log(Level);
+        template <Level lvl> void header();
+        template <Level lvl> logstream log();
         inline void endl();
-        template<typename T> logstream log(Level, const T&);
-        template<typename T> void append(const T&);
-        template<typename T> void append_separated(const T&);
+        template <typename T, Level lvl> logstream log(const T&);
+        template <typename T> void append(const T&);
+        template <typename T> void append_separated(const T&);
 
     public:
         Logger(const std::string& name);
@@ -66,17 +66,17 @@ class Logger
 
         // Main logging functions. Can be used to log one thing or to start
         // logging stream. Stream has newline inserted automatically at the end
-        inline logstream debug()   {return log(LVL_DEBUG);}
-        inline logstream info()    {return log(LVL_INFO);}
-        inline logstream warning() {return log(LVL_WARNING);}
-        inline logstream error()   {return log(LVL_ERROR);}
-        template<typename T> logstream debug(const T& x)
+        inline logstream debug()   {return log<LVL_DEBUG>();}
+        inline logstream info()    {return log<LVL_INFO>();}
+        inline logstream warning() {return log<LVL_WARNING>();}
+        inline logstream error()   {return log<LVL_ERROR>();}
+        template <typename T> logstream debug(const T& x)
             {return log(LVL_DEBUG, x);}
-        template<typename T> logstream info(const T& x)
+        template <typename T> logstream info(const T& x)
             {return log(LVL_INFO, x);}
-        template<typename T> logstream warning(const T& x)
+        template <typename T> logstream warning(const T& x)
             {return log(LVL_WARNING, x);}
-        template<typename T> logstream error(const T& x)
+        template <typename T> logstream error(const T& x)
             {return log(LVL_ERROR, x);}
 
         // Specifically for exception. Prints
@@ -88,22 +88,23 @@ extern Logger<LVL_DEBUG> logger;
 
 
 template <Level loglevel>
-inline typename Logger<loglevel>::logstream Logger<loglevel>::log(Level lvl)
+template <Level cur_level>
+inline typename Logger<loglevel>::logstream Logger<loglevel>::log()
 {
-    header(lvl);
+    header<cur_level>();
     logstream stream (*this);
-    if (lvl < loglevel) {
+    if (cur_level < loglevel) {
         stream.alive = false;
     }
     return stream;
 }
 
-template<Level loglevel>
-template<typename T>
-inline typename Logger<loglevel>::logstream Logger<loglevel>::log(Level lvl, const T& x)
+template <Level loglevel>
+template <typename T, Level cur_level>
+inline typename Logger<loglevel>::logstream Logger<loglevel>::log(const T& x)
 {
-    auto&& stream = log(lvl);
-    if (lvl >= loglevel) {
+    auto&& stream = log(cur_level);
+    if (cur_level >= loglevel) {
         append_separated(x);
     }
     return std::move(stream);
@@ -118,8 +119,8 @@ inline void Logger<loglevel>::endl()
     }
 }
 
-template<Level loglevel>
-template<typename T>
+template <Level loglevel>
+template <typename T>
 inline void Logger<loglevel>::append(const T& x)
 {
     std::cerr << x;
@@ -127,8 +128,8 @@ inline void Logger<loglevel>::append(const T& x)
         m_file_stream << x;
     }
 }
-template<Level loglevel>
-template<typename T>
+template <Level loglevel>
+template <typename T>
 inline void Logger<loglevel>::append_separated(const T& x)
 {
     std::cerr << ' ' << x;
@@ -148,9 +149,10 @@ Logger<loglevel>::Logger(const std::string& name)
 
 
 template <Level loglevel>
-void Logger<loglevel>::header(Level lvl)
+template <Level cur_level>
+void Logger<loglevel>::header()
 {
-    if (lvl < loglevel)  return;
+    if (cur_level < loglevel)  return;
     // print current time
     auto time = std::chrono::system_clock::now();
     auto time_c = std::chrono::system_clock::to_time_t(time);
@@ -158,7 +160,7 @@ void Logger<loglevel>::header(Level lvl)
 
     // print colored level info
     append(" [");
-    switch (lvl) {
+    switch (cur_level) {
         case LVL_DEBUG:
             append(termcolor::green);
             append(" DEBUG ");
