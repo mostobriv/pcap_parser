@@ -50,7 +50,6 @@ void PcapLoader::start_parsing()
         } else if (not mb_file.has_value() and m_should_stop) {
             logger.info() << "shutting down parser";
             return;
-
         }
     }
 }
