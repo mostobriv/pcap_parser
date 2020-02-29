@@ -1,6 +1,8 @@
 #include <thread>
 #include <csignal>
 #include <functional>
+#include <boost/filesystem.hpp>
+#include "inotify-cpp/NotifierBuilder.h"
 
 #include "StreamData.h"
 #include "ThreadQueue.hpp"
@@ -10,6 +12,10 @@
 
 
 void set_sigint_handler(std::function<void()>&&);
+inotify::NotifierBuilder create_notifier
+    ( const std::vector<boost::filesystem::path>& paths
+    , std::function<void(inotify::Notification)>&&
+    );
 
 
 int main(int argc, const char** argv)
@@ -32,12 +38,21 @@ int main(int argc, const char** argv)
         // start real workers
         auto loader = PcapLoader(data_queue, file_queue);
         auto writer = DatabaseWriter(data_queue);
+        auto notifier = create_notifier({"./pcaps"}, [&] (inotify::Notification n) {
+            if (n.path.extension() == ".pcap") {
+                file_queue.emplace(n.path.generic_string());
+                logger::logger.info() << "Add new file:" << n.path;
+            }
+        });
 
         auto loader_thread = std::thread([&] {
             loader.start_parsing();
         });
         auto writer_thread = std::thread([&] {
             writer.start_writing();
+        });
+        auto notifier_thread = std::thread([&] {
+            notifier.run();
         });
 
         // set handler for graceful stopping
@@ -51,12 +66,14 @@ int main(int argc, const char** argv)
                 ctrlc_pressed = true;
                 std::cout << "\b\bGracefully stopping. Press again to stop immediately"
                           << std::endl;
+                notifier.stop();
                 writer.set_should_stop();
                 loader.set_should_stop();
             }
         });
 
-        loader.set_should_stop();
+        // TODO: rework waiting
+
         loader_thread.join();
 
         while (not data_queue.empty()) {
@@ -66,6 +83,8 @@ int main(int argc, const char** argv)
 
         writer.set_should_stop();
         writer_thread.join();
+
+        notifier_thread.join();
 
     } catch (const std::exception &e) {
         logger::logger.error() << e.what();
@@ -84,7 +103,6 @@ int main(int argc, const char** argv)
         }
     }
     */
-
     return 0;
 }
 
@@ -104,4 +122,22 @@ void set_sigint_handler(std::function<void()>&& handler)
     sigemptyset(&sig_int_handler.sa_mask);
     sig_int_handler.sa_flags = 0;
     sigaction(SIGINT, &sig_int_handler, NULL);
+}
+
+
+inotify::NotifierBuilder create_notifier
+    ( const std::vector<boost::filesystem::path>& paths
+    , std::function<void(inotify::Notification)>&& cb
+    )
+{
+    auto events = { inotify::Event::close_write
+                  , inotify::Event::moved_to
+                  };
+    auto notifier = inotify::BuildNotifier()
+        .onEvents(events, cb)
+        ;
+    for (const auto& path : paths) {
+        notifier.watchPathRecursively(path);
+    }
+    return notifier;
 }
