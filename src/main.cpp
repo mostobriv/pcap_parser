@@ -90,19 +90,6 @@ int main(int argc, const char** argv)
         logger::logger.error() << e.what();
     }
 
-    /*
-     * may be used again later
-    while (not queue.empty()) {
-        auto stream = queue.pop();
-        auto side = stream.start_side;
-        std::cout << "+++++ conversation +++++\n";
-        for (const auto& reply : stream.data()) {
-            std::cout << "===== " << std::to_string(side) << " =====\n"
-                      << reply << std::endl;
-            side = StreamData::flip_side(side);
-        }
-    }
-    */
     return 0;
 }
 

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <chrono>
 #include <iomanip>
+#include <mutex>
 
 #include <boost/stacktrace.hpp>
 #include <boost/exception/all.hpp>
@@ -16,8 +17,15 @@ namespace logger
 
 enum Level {LVL_DEBUG=0, LVL_INFO, LVL_WARNING, LVL_ERROR, LVL_SILENT};
 
+class __BaseLoggerLock
+{
+    // Description: used for logger-global mutex
+    protected:
+        static std::mutex logger_mutex;
+};
+
 template <Level loglevel>
-class Logger
+class Logger : __BaseLoggerLock
 {
     // stream that automatically inserts newline when writing is finished
     struct logstream
@@ -91,6 +99,8 @@ template <Level loglevel>
 template <Level cur_level>
 inline typename Logger<loglevel>::logstream Logger<loglevel>::log()
 {
+    std::lock_guard _lock (logger_mutex);
+
     header<cur_level>();
     logstream stream (*this);
     if (cur_level < loglevel) {
