@@ -14,6 +14,7 @@
 #include "ThreadQueue.hpp"
 #include "StreamData.h"
 #include "logger.h"
+#include "RunningStatus.h"
 
 
 class DatabaseWriter
@@ -42,7 +43,7 @@ class DatabaseWriter
         mutable std::mutex       m_mutex;
         pqxx::connection         m_conn;
         ThreadQueue<StreamData>& m_queue;
-        bool                     m_should_stop;
+        RunningStatus            m_should_stop;
 
         void write_one(const StreamData&);
 
@@ -55,8 +56,10 @@ class DatabaseWriter
         DatabaseWriter(DatabaseWriter&&) = delete;
 
         // shows that the thread can be terminated now
-        bool should_stop() const;
-        DatabaseWriter& set_should_stop(bool should = true);
+        RunningStatus should_stop() const;
+        DatabaseWriter& set_should_stop(
+            RunningStatus should = RunningStatus::StopNow
+            );
 
         void start_writing();
 };

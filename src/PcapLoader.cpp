@@ -24,7 +24,7 @@ PcapLoader::PcapLoader( ThreadQueue<StreamData>& data_queue
                       )
     : connection_manager(cache_size, data_queue)
     , m_file_queue(file_queue)
-    , m_should_stop(false)
+    , m_should_stop(RunningStatus::Run)
     , cleanup_configuration(true, 1, 50)
     , reassembler( on_message_ready_callback
                  , &connection_manager
@@ -41,14 +41,20 @@ void PcapLoader::start_parsing()
     logger.debug() << "Start getting file names";
 
     while (true) {
+        if (m_should_stop == RunningStatus::StopNow) {
+            logger.info() << "Stopping immediately";
+            return;
+        }
+
         auto mb_file = m_file_queue.pop(1s);
 
         if (mb_file.has_value()) {
             logger.debug() << "got new file";
             this->parse_one(*mb_file);
             logger.debug() << "wait for next file";
-        } else if (not mb_file.has_value() and m_should_stop) {
-            logger.info() << "shutting down parser";
+        } else if (not mb_file.has_value()
+               and m_should_stop == RunningStatus::StopWhenEmpty) {
+            logger.info() << "Shutting down parser on empty queue";
             return;
         }
     }
@@ -159,11 +165,11 @@ void PcapLoader::on_connection_end_callback(
 }
 
 
-bool PcapLoader::should_stop() const
+RunningStatus PcapLoader::should_stop() const
 {
     return m_should_stop;
 }
-PcapLoader& PcapLoader::set_should_stop(bool should)
+PcapLoader& PcapLoader::set_should_stop(RunningStatus should)
 {
     m_should_stop = should;
     return *this;

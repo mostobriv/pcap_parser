@@ -9,6 +9,7 @@
 #include "StreamData.h"
 #include "logger.h"
 #include "ThreadQueue.hpp"
+#include "RunningStatus.h"
 
 
 class PcapLoader
@@ -49,7 +50,7 @@ class PcapLoader
 
         conn_mgr_t connection_manager;
         ThreadQueue<std::string>& m_file_queue;
-        bool m_should_stop;
+        RunningStatus m_should_stop;
         pcpp::TcpReassemblyConfiguration cleanup_configuration;
         pcpp::TcpReassembly reassembler;
 
@@ -76,8 +77,10 @@ class PcapLoader
         void parse_one(const std::string& filename);
         void parse_many(const std::vector<std::string>&);
 
-        bool should_stop() const;
-        PcapLoader& set_should_stop(bool should = true);
+        RunningStatus should_stop() const;
+        PcapLoader& set_should_stop(
+            RunningStatus should = RunningStatus::StopNow
+            );
 
         ~PcapLoader();
 };

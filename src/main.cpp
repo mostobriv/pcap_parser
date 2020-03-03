@@ -9,6 +9,7 @@
 #include "PcapLoader.h"
 #include "DatabaseWriter.h"
 #include "logger.h"
+#include "RunningStatus.h"
 
 
 void set_sigint_handler(std::function<void()>&&);
@@ -55,36 +56,45 @@ int main(int argc, const char** argv)
             notifier.run();
         });
 
+        logger::logger.info() << "All worker threads are up."
+            << "Press ctrl-c to stop gracefully";
+
         // set handler for graceful stopping
-        bool ctrlc_pressed = false;
+        RunningStatus threads_status = RunningStatus::Run;
         set_sigint_handler([&] {
-            if (ctrlc_pressed) {
-                std::cout << "\b\b";
-                logger::logger.info() << "Stopping immediately";
-                exit(1);
-            } else {
-                ctrlc_pressed = true;
-                std::cout << "\b\bGracefully stopping. Press again to stop immediately"
-                          << std::endl;
+            if (threads_status == RunningStatus::Run) {
+                threads_status = RunningStatus::StopWhenEmpty;
+                std::cout << "\b\bGracefully stopping."
+                    << " Press again to speed up."
+                    << std::endl;
+
+                // Stop watching directory
                 notifier.stop();
-                writer.set_should_stop();
-                loader.set_should_stop();
+                // Parse remaining files
+                loader.set_should_stop(RunningStatus::StopWhenEmpty);
+                while (not data_queue.empty()) {
+                    // Wait to finish parsing
+                    std::this_thread::yield();
+                }
+                // Load remaining streams
+                writer.set_should_stop(RunningStatus::StopWhenEmpty);
+            } else if (threads_status == RunningStatus::StopWhenEmpty) {
+                threads_status = RunningStatus::StopNow;
+                loader.set_should_stop(RunningStatus::StopNow);
+                writer.set_should_stop(RunningStatus::StopNow);
+                std::cout << "\b\bPress again to abort immediately" << std::endl;
+            } else if (threads_status == RunningStatus::StopNow) {
+                exit(1);
+                std::cout << "It looks like exit(1) failed."
+                    << " Kill the process named " << argv[0]
+                    << " with OS methods."
+                    << std::endl;
             }
         });
 
-        // TODO: rework waiting
-
-        loader_thread.join();
-
-        while (not data_queue.empty()) {
-            // wait for the writer to get all values
-            std::this_thread::yield();
-        }
-
-        writer.set_should_stop();
-        writer_thread.join();
-
         notifier_thread.join();
+        loader_thread.join();
+        writer_thread.join();
 
     } catch (const std::exception &e) {
         logger::logger.error() << e.what();

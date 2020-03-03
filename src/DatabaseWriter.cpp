@@ -19,6 +19,7 @@ DatabaseWriter::DatabaseWriter( ThreadQueue<StreamData>& queue
                               )
     : m_conn  (cdata.to_pq_string())
     , m_queue (queue)
+    , m_should_stop (RunningStatus::Run)
 {
     // Do auto migrations
 
@@ -97,11 +98,11 @@ DatabaseWriter::DatabaseWriter( ThreadQueue<StreamData>& queue
 }
 
 
-bool DatabaseWriter::should_stop() const
+RunningStatus DatabaseWriter::should_stop() const
 {
     return m_should_stop;
 }
-DatabaseWriter& DatabaseWriter::set_should_stop(bool arg)
+DatabaseWriter& DatabaseWriter::set_should_stop(RunningStatus arg)
 {
     m_should_stop = arg;
     return *this;
@@ -114,10 +115,16 @@ void DatabaseWriter::start_writing()
     logger.debug() << "wait for first stream";
 
     while (true) {
+        if (m_should_stop == RunningStatus::StopNow) {
+            logger.info() << "Stopping immediately";
+            return;
+        }
+
         auto mb_stream = m_queue.pop(1s);
 
-        if (not mb_stream.has_value() and m_should_stop) {
-            logger.info() << "shutting down writer";
+        if (not mb_stream.has_value()
+            and m_should_stop == RunningStatus::StopWhenEmpty) {
+            logger.info() << "Shutting down writer on empty queue";
             return;
 
         } else if (mb_stream.has_value()) {
