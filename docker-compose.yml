@@ -10,13 +10,3 @@ services:
     environment:
       POSTGRES_USER: pcap
       POSTGRES_PASSWORD: pcap_312b4a6b229587d831dd4a05fc83d4f7
-
-#   engine:
-#     build: .
-    # deploy:
-    # resources:
-    #     limits:
-    #         cpus: '0.50'
-    #         memory: 512M
-    #     reservations:
-    #         memory: 128M
