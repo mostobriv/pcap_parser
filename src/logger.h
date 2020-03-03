@@ -101,15 +101,15 @@ template <Level loglevel>
 template <Level cur_level>
 inline typename Logger<loglevel>::logstream Logger<loglevel>::log()
 {
-    {
-        std::lock_guard _guard (logger_mutex);
-        header<cur_level>();
-    }
     logstream stream (*this);
     if (cur_level < loglevel) {
         stream.alive = false;
+        logger_mutex.unlock();
+        return stream;
+    } else {
+        header<cur_level>();
+        return stream;
     }
-    return stream;
 }
 
 template <Level loglevel>
