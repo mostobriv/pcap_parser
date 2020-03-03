@@ -28,6 +28,7 @@ template <Level loglevel>
 class Logger : __BaseLoggerLock
 {
     // stream that automatically inserts newline when writing is finished
+    friend struct logstream;
     struct logstream
     {
         bool alive;
@@ -35,13 +36,14 @@ class Logger : __BaseLoggerLock
         inline logstream(Logger& a_logger)
             : alive(true)
             , logger(a_logger)
-            {}
+            {logger.logger_mutex.lock();}
         inline logstream(logstream&& other)
             : alive(other.alive)
             , logger(other.logger)
             {other.alive = false;}
         logstream(const logstream&) = delete;
-        inline ~logstream() {if (alive) logger.endl();}
+        inline ~logstream()
+        {if (alive) {logger.endl(); logger.logger_mutex.unlock();}}
     };
     template <typename T> friend inline logstream operator<< (logstream&& stream, const T& x)
     {
@@ -99,9 +101,10 @@ template <Level loglevel>
 template <Level cur_level>
 inline typename Logger<loglevel>::logstream Logger<loglevel>::log()
 {
-    std::lock_guard _lock (logger_mutex);
-
-    header<cur_level>();
+    {
+        std::lock_guard _guard (logger_mutex);
+        header<cur_level>();
+    }
     logstream stream (*this);
     if (cur_level < loglevel) {
         stream.alive = false;
