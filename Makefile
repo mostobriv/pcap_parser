@@ -30,7 +30,7 @@ INCLUDES = -I ./lib/fmt/include \
            -I ./lib/inotify-cpp/src/include \
            -I ./lib/PcapPlusPlus/Dist/header
 
-LIBRARIES = -lpcap -lpthread -lpqxx -lboost_system -lboost_filesystem
+LIBRARIES = -lpcap -lpthread -lpqxx -lboost_system -lboost_filesystem -lstdc++fs
 ifeq ($(STACKTRACE_BACKEND),BACKTRACE_SYSTEM)
 LIBRARIES := $(LIBRARIES) -ldl -lboost_stacktrace_backtrace
 endif

@@ -10,6 +10,7 @@
 #include "DatabaseWriter.h"
 #include "logger.h"
 #include "RunningStatus.h"
+#include "Configuration.h"
 
 
 void set_sigint_handler(std::function<void()>&&);
@@ -21,18 +22,18 @@ inotify::NotifierBuilder create_notifier
 
 int main(int argc, const char** argv)
 {
+    auto conf = Configuration(argc, argv);
+    if (conf.should_exit) {
+        return 0;
+    }
+
     ThreadQueue<StreamData> data_queue;
     ThreadQueue<std::string> file_queue;
 
-    if (argc < 2) {
-        logger::logger.error() << "Usage:" << argv[0] << "[*].pcap";
-        return 1;
-    }
-
     // add all files provided on command line
-    for (int i = 1; i < argc; ++i) {
-        file_queue.emplace(argv[i]);
-        logger::logger.debug() << "add file" << argv[i];
+    for (const auto& file : conf.files) {
+        file_queue.emplace(file);
+        logger::logger.debug() << "add file" << file;
     }
 
     try {
@@ -86,7 +87,7 @@ int main(int argc, const char** argv)
             } else if (threads_status == RunningStatus::StopNow) {
                 exit(1);
                 std::cout << "It looks like exit(1) failed."
-                    << " Kill the process named " << argv[0]
+                    << " Kill the process named " << conf.program_name
                     << " with OS methods."
                     << std::endl;
             }
