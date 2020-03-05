@@ -68,7 +68,14 @@ bool is_help(const char* str)
 }
 void print_help(const std::string& name)
 {
-    std::cout << "help, i'm trapped in a help machine!" << std::endl;
+    std::cout
+        << "Usage: " << name << " [--dir=DIR...] PCAP..."
+        << "\nPahan pcap loader"
+        << "\n"
+        << "\n    DIR - directory to watch for new pcaps"
+        << "\n"
+        << "\n    PCAP - pcap-file to add immediately"
+        << std::endl;
 }
 
 bool is_version(const char* str)
