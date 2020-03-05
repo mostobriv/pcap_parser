@@ -2,8 +2,7 @@
 
 #include <iostream>
 #include <string_view>
-#include <optional>
-#include <string_view>
+#include <unordered_map>
 #include <tuple>
 
 
@@ -24,12 +23,12 @@ struct ValueOption
     std::string long_form;
     std::string short_form;
 
-    bool matches(const std::string& str)
+    bool matches(const std::string& str) const
     {
         return has_prefix(short_form, str) or has_prefix(long_form, str);
     }
 
-    auto get(int argc, const char** argv)
+    auto get(int argc, const char** argv) const
         -> std::tuple<int, const char**, bool, std::optional<std::string>>
            /*         argc   argv'     matched       match val          */
     {
@@ -45,8 +44,13 @@ struct ValueOption
         }
     }
 
+    bool operator== (const ValueOption& rhs) const
+    {
+        return this->long_form == rhs.long_form;
+    }
+
     private:
-        auto get_next(int argc, const char** argv)
+        auto get_next(int argc, const char** argv) const
             -> std::tuple<int, const char**, bool, std::optional<std::string>>
         {
             argc -= 1;
@@ -58,6 +62,17 @@ struct ValueOption
             }
         }
 };
+
+namespace std
+{
+    template<> struct hash<ValueOption>
+    {
+        std::size_t operator() (const ValueOption& v) const noexcept
+        {
+            return std::hash<std::string>()(v.long_form);
+        }
+    };
+}
 
 
 bool is_help(const char* str)
@@ -96,8 +111,50 @@ Configuration::Configuration(
     )
     : should_exit  (false)
     , program_name (argv[0])
+    , db_creds     ({})
 {
+    // create named options
+
     ValueOption dir_opt = {"--dir", "-d"};
+    auto on_dir_opt = [&](const std::string& val) {
+        logger.debug() << "Add directory" << val;
+        dirs.push_back(val);
+    };
+
+    ValueOption db_host_opt {"--db-host", "--db-host="};
+    auto on_db_host = [&](const std::string& val) {
+        logger.debug() << "Set db host to" << val;
+        m_incomplete_db_creds.host = val;
+        m_has_db_host = true;
+    };
+    ValueOption db_port_opt {"--db-port", "--db-port="};
+    auto on_db_port = [&](const std::string& val) {
+        logger.debug() << "Set db port to" << val;
+        m_incomplete_db_creds.port = std::stoi(val);
+        m_has_db_port = true;
+    };
+    ValueOption db_user_opt {"--db-user", "--db-user="};
+    auto on_db_user = [&](const std::string& val) {
+        logger.debug() << "Set db user to" << val;
+        m_incomplete_db_creds.user = val;
+        m_has_db_user = true;
+    };
+    ValueOption db_pwd_opt {"--db-pwd", "--db-pwd="};
+    auto on_db_pwd = [&](const std::string& val) {
+        logger.debug() << "Set db pwd to" << val;
+        m_incomplete_db_creds.password = val;
+        m_has_db_pwd = true;
+    };
+
+    const std::unordered_map
+        <ValueOption, std::function<void(const std::string&)>> options =
+        { {dir_opt, on_dir_opt}
+        , {db_host_opt, on_db_host}
+        , {db_port_opt, on_db_port}
+        , {db_user_opt, on_db_user}
+        , {db_pwd_opt, on_db_pwd}
+        };
+
     argc -= 1; //
     argv += 1; // skips argv[0]
 
@@ -125,29 +182,41 @@ Configuration::Configuration(
             return;
         }
 
-        logger.debug() << "Trying dir option";
-        auto [argc_next, argv_next, matched, val] = dir_opt.get(cur_argc, cur_argv);
-        argc = argc_next - 1;
-        argv = argv_next + 1;
-        if (matched) {
-            if (val.has_value()) {
-                logger.debug() << "Add directory" << *val;
-                dirs.push_back(*val);
-            } else {
-                std::cout
-                    << "Incorrect usage of options. Type --help for more info."
-                    << std::endl;
-                should_exit = true;
-                return;
-            }
+        bool value_option_matched = false;
+        for (const auto& [opt, cb] : options) {
+            auto [argc_next, argv_next, matched, val] =
+                opt.get(cur_argc, cur_argv);
+            argc = argc_next - 1;
+            argv = argv_next + 1;
 
-            continue;
+            if (matched) {
+                if (val.has_value()) {
+                    cb(*val);
+                    value_option_matched = true;
+                    break;
+                } else {
+                    std::cout
+                        << "Incorrect usage of options."
+                        << " Type --help for more info."
+                        << std::endl;
+                    should_exit = true;
+                }
+            }
+            if (should_exit)  return;
         }
 
-        logger.debug() << "Didn't match any named option";
+        if (not value_option_matched) {
+            logger.debug() << "Didn't match any named option";
 
-        // All positional options are files
-        files.push_back(*cur_argv);
-        logger.debug() << "Add file" << *cur_argv;
+            // All positional options are files
+            files.push_back(*cur_argv);
+            logger.debug() << "Add file" << *cur_argv;
+        }
+    }
+
+    // finalize connection data
+    if (m_has_db_host and m_has_db_port and m_has_db_user and m_has_db_pwd) {
+        logger.debug() << "Setting full connection data";
+        db_creds = m_incomplete_db_creds;
     }
 }
