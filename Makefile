@@ -43,7 +43,7 @@ INCLUDES = -I ./lib/fmt/include \
            -I ./lib/yaml-cpp/include \
            -I ./lib/PcapPlusPlus/Dist/header
 
-LIBRARIES = -lpcap -lpthread -lpqxx -lboost_system -lboost_filesystem -lstdc++fs
+LIBRARIES = -lpcap -lpthread -lpqxx -lstdc++fs
 ifeq ($(STACKTRACE_BACKEND),BACKTRACE_SYSTEM)
 LIBRARIES := $(LIBRARIES) -ldl -lboost_stacktrace_backtrace
 endif
@@ -123,7 +123,11 @@ lib/PcapPlusPlus/mk/platform.mk:
 	@echo 'Building submodule PcapPlusPlus'
 	@$(MAKE) -C lib/PcapPlusPlus/ libs
 
-lib/inotify-cpp/build/src/libinotify-cpp.a: lib/inotify-cpp/build
+lib/inotify-cpp/build/src/libinotify-cpp.a:
+	@echo 'Initializing submodule $@'
+	@cd lib/inotify-cpp/ && git submodule update --init
+	@mkdir lib/inotify-cpp/build
+	#
 	@echo 'Building submodule inotify-cpp'
 	@cd lib/inotify-cpp/build/ && cmake ..
 	@$(MAKE) -C lib/inotify-cpp/build

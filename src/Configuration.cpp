@@ -4,6 +4,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <tuple>
+#include "yaml-cpp/yaml.h"
 
 
 logger::Logger<logger::Level::LVL_DEBUG> Configuration::logger ("Conf");
@@ -218,5 +219,9 @@ Configuration::Configuration(
     if (m_has_db_host and m_has_db_port and m_has_db_user and m_has_db_pwd) {
         logger.debug() << "Setting full connection data";
         db_creds = m_incomplete_db_creds;
+    }
+
+    if (std::filesystem::exists(default_config_file)) {
+        auto f = YAML::LoadFile(default_config_file);
     }
 }

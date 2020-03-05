@@ -4,7 +4,6 @@
 #include <string>
 #include <optional>
 #include <vector>
-#include <boost/filesystem.hpp>
 
 #include "logger.h"
 #include "DatabaseWriter.h"
@@ -24,7 +23,7 @@ struct Configuration
     public:
         bool                                 should_exit;
         std::string                          program_name;
-        std::vector<boost::filesystem::path> dirs;
+        std::vector<std::filesystem::path>   dirs;
         std::vector<std::string>             files;
         std::optional<DatabaseWriter::ConnectionData> db_creds;
 

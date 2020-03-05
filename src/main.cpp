@@ -1,7 +1,6 @@
 #include <thread>
 #include <csignal>
 #include <functional>
-#include <boost/filesystem.hpp>
 #include "inotify-cpp/NotifierBuilder.h"
 
 #include "StreamData.h"
@@ -15,7 +14,7 @@
 
 void set_sigint_handler(std::function<void()>&&);
 inotify::NotifierBuilder create_notifier
-    ( const std::vector<boost::filesystem::path>& paths
+    ( const std::vector<std::filesystem::path>& paths
     , std::function<void(inotify::Notification)>&&
     );
 
@@ -124,7 +123,7 @@ void set_sigint_handler(std::function<void()>&& handler)
 
 
 inotify::NotifierBuilder create_notifier
-    ( const std::vector<boost::filesystem::path>& paths
+    ( const std::vector<std::filesystem::path>& paths
     , std::function<void(inotify::Notification)>&& cb
     )
 {

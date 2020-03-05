@@ -9,8 +9,6 @@ RUN apt-get update && \
     g++ \
     gcc \
     libboost-stacktrace-dev \
-    libboost-system-dev \
-    libboost-filesystem-dev \
     libpq-dev \
     libpqxx-dev
 

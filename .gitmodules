@@ -6,7 +6,7 @@
 	url = https://github.com/fmtlib/fmt
 [submodule "lib/inotify-cpp"]
 	path = lib/inotify-cpp
-	url = https://github.com/erikzenker/inotify-cpp
+	url = https://github.com/d86leader/inotify-cpp
 [submodule "lib/yaml-cpp"]
 	path = lib/yaml-cpp
 	url = https://github.com/jbeder/yaml-cpp
