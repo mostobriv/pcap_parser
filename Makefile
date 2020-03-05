@@ -5,6 +5,15 @@
 # Allowed values: BACKTRACE_SYSTEM, NONE
 STACKTRACE_BACKEND = NONE
 
+DEBUG_INFO = FALSE
+
+# Optimization level is unset for debug
+ifeq ($(DEBUG_INFO),TRUE)
+OPTIMIZATION = g
+else
+OPTIMIZATION = 0
+endif
+
 
 ## Submodules and system dependecies ##
 
@@ -44,17 +53,21 @@ HEADERS = $(wildcard src/*.h) $(wildcard src/*.hpp)
 OBJECTS = $(patsubst %.cpp,%.o,$(SOURCES))
 BINARY  = parser
 
-FLAGS = -g
+
+FLAGS = -O$(OPTIMIZATION)
+
 ifeq ($(STACKTRACE_BACKEND),BACKTRACE_SYSTEM)
 FLAGS := $(FLAGS) -DBOOST_STACKTRACE_USE_BACKTRACE
 else
 FLAGS := $(FLAGS) -DBOOST_STACKTRACE_USE_NOOP
 endif
 
+ifeq ($(DEBUG_INFO),TRUE)
+FLAGS := $(FLAGS) -g
+endif
+
+
 WARNINGS = -Wall -Wextra -Werror -Wno-unused-parameter -Wno-deprecated-declarations
-
-
-DEBUG = 
 
 
 ## General project files ##
@@ -133,10 +146,16 @@ clean:
 
 .PHONY: help
 help:
-	@echo '$(MAKE) [STACKTRACE_BACKEND=BACKEND] [TARGET]'
+	@echo '$(MAKE) [STACKTRACE_BACKEND=BACKEND] [OPTIMIZATION=LEVEL] [DEBUG_INFO=TRUE|FALSE] [TARGET]'
 	@echo '    STACKTRACE_BACKEND - what to use for boost::stacktrace'
 	@echo "        NONE (default) - don't use anything"
 	@echo "        BACKTRACE_SYSTEM - use system gcc's backtrace.h"
+	@echo
+	@echo '    OPTIMIZATION - compiler optimization level'
+	@echo '        Pass any option supported by your compiler -O option,'
+	@echo '        e.g. 0, 3, fast'
+	@echo
+	@echo '    DEBUG_INFO - include debug info into binaries'
 	@echo
 	@echo '    TARGET:'
 	@echo '        clean'
