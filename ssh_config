@@ -1,6 +1,0 @@
-Host pcap_parser
-    Hostname 127.0.0.1
-    Port 8888
-    User root
-    
-
