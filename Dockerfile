@@ -9,8 +9,6 @@ RUN apt-get update && \
     g++ \
     gcc \
     libboost-stacktrace-dev \
-    libboost-system-dev \
-    libboost-filesystem-dev \
     libpq-dev \
     libpqxx-dev
 
@@ -20,11 +18,13 @@ COPY .git/ .git/
 COPY .gitmodules .gitmodules
 
 COPY Makefile Makefile
-RUN mkdir -p lib/PcapPlusPlus/
-RUN mkdir -p lib/fmt/
+RUN mkdir -p lib/PcapPlusPlus/ \
+    && mkdir -p lib/fmt/ \
+    && mkdir -p lib/inotify-cpp/
 
 RUN make lib/fmt/build/
 RUN make lib/PcapPlusPlus/mk/platform.mk
+RUN make lib/inotify-cpp/build/src/libinotify-cpp.a
 
 COPY src/ src/
 RUN make

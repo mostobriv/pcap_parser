@@ -6,35 +6,33 @@
 #include <LRUList.h>
 #include <TcpReassembly.h>
 
+#include "StreamData.h"
 #include "logger.h"
+#include "ThreadQueue.hpp"
+#include "RunningStatus.h"
 
 
 class PcapLoader
 {
-    public:
-        enum Side : int {Client = 0, Server, Unknown};
-
     private:
         struct reassembly_state_t
         {
-            Side current_side;
-            uint32_t msg_count;
-            uint16_t src_port;
-            uint16_t dest_port;
+            StreamData::Side current_side;
+            uint64_t         msg_count;
+            std::string      buffer; // one side data
+            StreamData       all_data;
 
-
-            inline reassembly_state_t()
-                : reassembly_state_t(Side::Unknown, 0, 0, 0) {};
+            reassembly_state_t() = delete;
             inline reassembly_state_t(uint16_t s, uint16_t d)
-                : reassembly_state_t(Side::Unknown, 0, s, d) {};
-            inline reassembly_state_t( Side start_side, uint32_t arg_msg_count
+                : reassembly_state_t(StreamData::Side::Unknown, s, d) {}
+            inline reassembly_state_t( StreamData::Side start_side
                                      , uint16_t arg_src_port
                                      , uint16_t arg_dest_port
                                      )
                 : current_side (start_side)
-                , msg_count    (arg_msg_count)
-                , src_port     (arg_src_port)
-                , dest_port    (arg_dest_port)
+                , msg_count    (0)
+                , buffer       ()
+                , all_data     (start_side, arg_src_port, arg_dest_port)
                 {}
         };
 
@@ -42,17 +40,17 @@ class PcapLoader
         {
             std::map<uint32_t, reassembly_state_t> table;
             pcpp::LRUList<uint32_t> cache;
+            ThreadQueue<StreamData>& queue;
 
-
-            conn_mgr_t(size_t cache_size) : table(), cache(cache_size) {}
+            conn_mgr_t(size_t cache_size, ThreadQueue<StreamData>& q)
+                : table(), cache(cache_size), queue(q) {}
         };
 
-        static logger::Logger logger;
-
-
-        bool autoremove;
+        static logger::Logger<logger::Level::LVL_DEBUG> logger;
 
         conn_mgr_t connection_manager;
+        ThreadQueue<std::string>& m_file_queue;
+        RunningStatus m_should_stop;
         pcpp::TcpReassemblyConfiguration cleanup_configuration;
         pcpp::TcpReassembly reassembler;
 
@@ -72,11 +70,17 @@ class PcapLoader
 
 
     public:
-        PcapLoader(size_t cache_size=64);
-        // Watch();
-        bool parse(const std::string& filename);
-        ~PcapLoader();
+        PcapLoader( ThreadQueue<StreamData>&, ThreadQueue<std::string>&
+                  , size_t cache_size=64
+                  );
+        void start_parsing();
+        void parse_one(const std::string& filename);
+        void parse_many(const std::vector<std::string>&);
 
-        inline bool get_autoremove() { return autoremove; };
-        inline void set_autoremove(bool state) { autoremove = state; };
+        RunningStatus should_stop() const;
+        PcapLoader& set_should_stop(
+            RunningStatus should = RunningStatus::StopNow
+            );
+
+        ~PcapLoader();
 };

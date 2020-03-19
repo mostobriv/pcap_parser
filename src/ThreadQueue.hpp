@@ -13,7 +13,7 @@ template<typename T>
 class ThreadQueue
 {
     private:
-        std::queue<T> m_queue;
+        std::queue<T>                   m_queue;
         mutable std::condition_variable m_cond;
         mutable std::mutex              m_mutex;
 
@@ -79,6 +79,7 @@ void ThreadQueue<T>::emplace(Args&&... args)
     std::lock_guard _lock (m_mutex);
 
     m_queue.emplace(std::forward<Args>(args)...);
+    m_cond.notify_one();
 }
 
 template<typename T>
@@ -97,8 +98,8 @@ auto ThreadQueue<T>::pop() -> value_type
     std::unique_lock _lock (m_mutex);
 
     // who the fuck thought spurious releases were a good idea?
-    while (m_queue.empty()) {m_cond.wait(_lock);}
-    auto elem = m_queue.front();
+    while (m_queue.empty()) { m_cond.wait(_lock); }
+    value_type elem = std::move(m_queue.front()); //explicitly non-reference
     m_queue.pop();
     return elem;
 }
@@ -110,26 +111,14 @@ auto ThreadQueue<T>::pop(const std::chrono::duration<Rep, Period>& timeout)
 {
     std::unique_lock _lock (m_mutex);
 
-    bool spurious = true;
-    while (spurious) {
-        auto release = m_cond.wait_for(_lock, timeout);
-        // Three possibilities: timeouted on wait, the condition released, or
-        // spurious release happened.
-        // In first case, return Nothing.
-        // In second case, exit the cycle and get real element.
-        // Spurious interrupt is when the release was not on timeout and the
-        // condition still doesn't hold.
-        // Again, why the fuck did they create a standard with spurious releases?
-        if (release == std::cv_status::timeout) {
-            return {};
-        } else if (m_queue.empty()) {
-            spurious = true;
-        } else {
-            // queue not empty
-            spurious = false;
-        }
+    auto release = m_cond.wait_for(_lock, timeout, [&] {
+        return not m_queue.empty();
+    });
+    if (release == false) {
+        return {};
+    } else {
+        value_type elem = std::move(m_queue.front()); //explicitly non-reference
+        m_queue.pop();
+        return elem;
     }
-    auto elem = m_queue.front();
-    m_queue.pop();
-    return elem;
 }
