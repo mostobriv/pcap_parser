@@ -2,3 +2,4 @@ objs/
 parser
 .tags
 logs
+compile_commands.json
