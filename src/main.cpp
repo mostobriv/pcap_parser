@@ -26,6 +26,8 @@ int main(int argc, const char** argv)
         return 0;
     }
 
+    auto db_creds = conf.db_creds.value_or(DatabaseWriter::DefaultConnData);
+
     ThreadQueue<StreamData> data_queue;
     ThreadQueue<std::string> file_queue;
 
@@ -38,8 +40,9 @@ int main(int argc, const char** argv)
     try {
         // start real workers
         auto loader = PcapLoader(data_queue, file_queue);
-        auto writer = DatabaseWriter(data_queue);
-        auto notifier = create_notifier({"./pcaps"}, [&] (inotify::Notification n) {
+        auto writer = DatabaseWriter(data_queue, db_creds);
+        auto notifier =
+            create_notifier(conf.dirs, [&] (inotify::Notification n) {
             if (n.path.extension() == ".pcap") {
                 file_queue.emplace(n.path.generic_string());
                 logger::logger.info() << "Add new file:" << n.path;
