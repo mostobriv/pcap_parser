@@ -110,7 +110,7 @@ objs:
 lib/fmt/build/libfmt.a:
 	@echo 'Initializing submodule $@'
 	@cd lib/fmt && git submodule update --init
-	@mkdir lib/fmt/build
+	@mkdir -p lib/fmt/build
 	#
 	@echo 'Building submodule fmt'
 	@cd lib/fmt/build/ && cmake ..
@@ -126,7 +126,7 @@ lib/PcapPlusPlus/mk/platform.mk:
 lib/inotify-cpp/build/src/libinotify-cpp.a:
 	@echo 'Initializing submodule $@'
 	@cd lib/inotify-cpp/ && git submodule update --init
-	@mkdir lib/inotify-cpp/build
+	@mkdir -p lib/inotify-cpp/build
 	#
 	@echo 'Building submodule inotify-cpp'
 	@cd lib/inotify-cpp/build/ && cmake ..
@@ -135,7 +135,7 @@ lib/inotify-cpp/build/src/libinotify-cpp.a:
 lib/yaml-cpp/build/libyaml-cpp.a:
 	@echo 'Initializing submodule $@'
 	@cd lib/yaml-cpp/ && git submodule update --init
-	@mkdir lib/yaml-cpp/build
+	@mkdir -p lib/yaml-cpp/build
 	#
 	@echo 'Building submodule yaml-cpp'
 	@cd lib/yaml-cpp/build/ && cmake .. -DYAML_CPP_BUILD_TESTS=OFF
