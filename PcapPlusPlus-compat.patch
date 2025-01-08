@@ -1,0 +1,12 @@
+diff --git a/Pcap++/src/PcapLiveDevice.cpp b/Pcap++/src/PcapLiveDevice.cpp
+index 5be1e035..02cce2cc 100644
+--- a/Pcap++/src/PcapLiveDevice.cpp
++++ b/Pcap++/src/PcapLiveDevice.cpp
+@@ -22,7 +22,6 @@
+ #else
+ #include <arpa/inet.h>
+ #include <sys/ioctl.h>
+-#include <sys/sysctl.h>
+ #include <net/if.h>
+ #endif
+ #if defined(MAC_OS_X) || defined(FREEBSD)

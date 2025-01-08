@@ -118,7 +118,7 @@ lib/fmt/build/libfmt.a:
 
 lib/PcapPlusPlus/mk/platform.mk:
 	@echo 'Initializing submodule $@'
-	@cd lib/PcapPlusPlus/ && git submodule update --init && ./configure-linux.sh --default
+	@cd lib/PcapPlusPlus/ && git submodule update --init && git apply ../../PcapPlusPlus-compat.patch && ./configure-linux.sh --default
 	#
 	@echo 'Building submodule PcapPlusPlus'
 	@$(MAKE) -C lib/PcapPlusPlus/ libs
